@@ -153,8 +153,10 @@ def create_app():
     register_routes(app)
 
     # Arrêter le scheduler proprement à la fermeture
-    import atexit
-    atexit.register(lambda: scheduler.shutdown())
+    # (None dans les workers qui n'ont pas obtenu le verrou)
+    if scheduler:
+        import atexit
+        atexit.register(lambda: scheduler.shutdown())
     
     return app
 

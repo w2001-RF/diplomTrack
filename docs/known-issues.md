@@ -9,9 +9,8 @@ Fixed in branch `fix/delay-warnings`. The check used to look for `status='IN_PRO
 
 It now selects tickets by `current_milestone_id` only and uses the chronology that is still open (`ended_at IS NULL`). The job pushes `app.app_context()`, and the 24-hour dedup only looks at earlier *delay* warnings, so other `warning` notifications don't suppress it. Covered by `tests/test_delay_warnings.py`.
 
-### 2. The scheduler runs once per Gunicorn worker
-`app.py` starts APScheduler inside `create_app()`. `entrypoint.sh` launches Gunicorn with `-w 6`, so six schedulers run the same job. Once issue 1 is fixed, every warning would be created six times.
-**Fix:** run the scheduler in a separate process or container, use `gunicorn --preload` with a lock, or use a job store with a single leader.
+### 2. ✅ Fixed: the scheduler ran once per Gunicorn worker
+Fixed in branch `fix/single-scheduler`. `create_app()` runs in every Gunicorn worker, so `-w 6` started six schedulers. `init_scheduler()` now takes an exclusive, non-blocking lock on a file (`fcntl.flock` on Linux, `msvcrt.locking` on Windows), and only the process holding it starts APScheduler. If that worker dies, the OS releases the lock and the respawned worker picks it up. Set `ENABLE_SCHEDULER=false` to turn the scheduler off entirely. Covered by `tests/test_scheduler_lock.py`.
 
 ### 3. `entrypoint.sh` starts Gunicorn twice
 The first `gunicorn wsgi:app …` line runs in the foreground (single worker, no `exec`), so everything after it is never reached. That includes the intended `exec gunicorn -w 6`. `init_db.py` is also listed twice.
