@@ -94,7 +94,7 @@ Document validation and invalidation in `DocumentService` can trigger transition
 | Audit trail | `AuditService.log_action()` writes an `audit_logs` row and appends to a per-route file in `backend/logs/` (for example `api_tickets_1_transition.log`) |
 | In-app notifications | `NotificationService` stores `notifications` rows. The frontend polls them through `/api/notifications` |
 | Email | `EmailService` renders HTML templates stored in `AppConfig` (seeded from `templates/emails/*.html`) and sends them through Flask-Mail |
-| Scheduled jobs | APScheduler runs an hourly delay check for tickets waiting in `EN_ATTENTE_REPONSE` longer than `AppConfig.warning_delay_days` |
+| Scheduled jobs | APScheduler runs an hourly delay check for tickets waiting in `EN_ATTENTE_REPONSE` longer than `AppConfig.warning_delay_days`. Every Gunicorn worker calls `create_app()`, but a file lock (`SCHEDULER_LOCK_FILE`) makes sure only one process per container runs the scheduler |
 | Configuration | `config.py` reads environment variables. Business settings (delays, upload size, templates) live in the single-row `app_config` table and can be edited in the UI |
 | File storage | When `USE_MINIO=true`, profile images go to the MinIO bucket `uploads`. Otherwise they go to `uploads/profiles/`. Documents store only a `file_path` reference |
 

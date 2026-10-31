@@ -95,6 +95,8 @@ Do not commit `.env`.
 | `MAIL_SERVER` / `MAIL_PORT` | `smtp.gmail.com` / `465` | |
 | `MAIL_USE_TLS` / `MAIL_USE_SSL` | `true` / `false` | Compose sets SSL on port 465 |
 | `UPLOAD_FOLDER` | `uploads/profiles` | Local avatar folder |
+| `ENABLE_SCHEDULER` | `true` | `false` disables the background jobs (useful for tests or extra API replicas) |
+| `SCHEDULER_LOCK_FILE` | `<system temp>/diplomtrack-scheduler.lock` | Lock file that elects the single process that runs the scheduler |
 
 `MAX_CONTENT_LENGTH` is fixed at 10 MB per request.
 
