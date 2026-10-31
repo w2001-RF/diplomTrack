@@ -12,9 +12,8 @@ It now selects tickets by `current_milestone_id` only and uses the chronology th
 ### 2. ✅ Fixed: the scheduler ran once per Gunicorn worker
 Fixed in branch `fix/single-scheduler`. `create_app()` runs in every Gunicorn worker, so `-w 6` started six schedulers. `init_scheduler()` now takes an exclusive, non-blocking lock on a file (`fcntl.flock` on Linux, `msvcrt.locking` on Windows), and only the process holding it starts APScheduler. If that worker dies, the OS releases the lock and the respawned worker picks it up. Set `ENABLE_SCHEDULER=false` to turn the scheduler off entirely. Covered by `tests/test_scheduler_lock.py`.
 
-### 3. `entrypoint.sh` starts Gunicorn twice
-The first `gunicorn wsgi:app …` line runs in the foreground (single worker, no `exec`), so everything after it is never reached. That includes the intended `exec gunicorn -w 6`. `init_db.py` is also listed twice.
-**Fix:** keep only the final block (`python init_db.py` followed by `exec gunicorn -w 6 …`).
+### 3. ✅ Fixed: `entrypoint.sh` started Gunicorn twice
+Fixed in branch `fix/entrypoint`. A leftover single-worker `gunicorn` line ran in the foreground, so the intended `exec gunicorn -w 6` was never reached and `init_db.py` was listed twice. The script now waits for Postgres, runs `init_db.py` once, and `exec`s Gunicorn so it gets container signals as PID 1. The worker count comes from `GUNICORN_WORKERS` (default 6), and `set -e` stops the container if initialization fails. A new `.gitattributes` keeps `*.sh` files on LF line endings, because a Windows checkout with CRLF would break the script inside the Linux container.
 
 ### 4. `config.py` imports the test suite
 `from tests.conftest import app` is at the top of `config.py`. Production code then depends on `pytest` and test fixtures, and the import is unused.
