@@ -17,9 +17,8 @@ Result: the hourly job and `POST /api/notifications/check-delays` always find 0 
 `app.py` starts APScheduler inside `create_app()`. `entrypoint.sh` launches Gunicorn with `-w 6`, so six schedulers run the same job. Once issue 1 is fixed, every warning would be created six times.
 **Fix:** run the scheduler in a separate process or container, use `gunicorn --preload` with a lock, or use a job store with a single leader.
 
-### 3. `entrypoint.sh` starts Gunicorn twice
-The first `gunicorn wsgi:app …` line runs in the foreground (single worker, no `exec`), so everything after it is never reached. That includes the intended `exec gunicorn -w 6`. `init_db.py` is also listed twice.
-**Fix:** keep only the final block (`python init_db.py` followed by `exec gunicorn -w 6 …`).
+### 3. ✅ Fixed: `entrypoint.sh` started Gunicorn twice
+Fixed in branch `fix/entrypoint`. A leftover single-worker `gunicorn` line ran in the foreground, so the intended `exec gunicorn -w 6` was never reached and `init_db.py` was listed twice. The script now waits for Postgres, runs `init_db.py` once, and `exec`s Gunicorn so it gets container signals as PID 1. The worker count comes from `GUNICORN_WORKERS` (default 6), and `set -e` stops the container if initialization fails. A new `.gitattributes` keeps `*.sh` files on LF line endings, because a Windows checkout with CRLF would break the script inside the Linux container.
 
 ### 4. `config.py` imports the test suite
 `from tests.conftest import app` is at the top of `config.py`. Production code then depends on `pytest` and test fixtures, and the import is unused.

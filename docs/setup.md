@@ -14,7 +14,7 @@ docker compose up --build
 | http://localhost:9001 | MinIO console |
 | localhost:5432 | PostgreSQL (`diplomtrack` / `diplomtrack`) |
 
-On startup the backend container waits for Postgres, runs `python init_db.py` (creates tables and seeds reference data, safe to re-run), then starts Gunicorn.
+On startup the backend container (`backend/entrypoint.sh`) waits for Postgres and runs `python init_db.py`, which creates tables and seeds reference data and is safe to re-run. It then `exec`s Gunicorn with `GUNICORN_WORKERS` workers (default 6). If initialization fails, the container exits instead of serving.
 
 Runtime data is bind-mounted into the repo: `./postgres`, `./minio`, `./backend/logs`, `./backend/uploads`, `./backend/data`. Delete `./postgres` to reset the database.
 
