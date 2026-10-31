@@ -1,0 +1,34 @@
+# Secrets
+.env
+backend/.env*
+
+# Docker runtime data (bind-mounted volumes)
+postgres/
+minio/
+
+# Backend runtime data
+backend/data/
+backend/logs/
+backend/uploads/
+*.db
+*.log
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / frontend build output
+node_modules/
+dist/
+
+# Editors and OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,17 @@
+Flask
+Flask-SQLAlchemy
+Flask-JWT-Extended
+Flask-Migrate
+Flask-Cors
+psycopg2-binary
+marshmallow
+boto3
+gunicorn
+python-dotenv
+flask-restx
+pytest
+pytest-flask
+coverage
+waitress # Windows compatible server
+APScheduler==3.10.4
+flask_mail

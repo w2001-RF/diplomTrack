@@ -1,0 +1,101 @@
+services:
+
+  # ---------------------------
+  # DATABASE (Postgres)
+  # ---------------------------
+  postgres:
+    image: postgres:16  
+    container_name: diplomtrack_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: diplomtrack
+      POSTGRES_USER: diplomtrack
+      POSTGRES_PASSWORD: diplomtrack
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U diplomtrack"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------
+  # MINIO (File storage)
+  # ---------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: diplomtrack_minio
+    command: server /data --console-address ":9001"
+    restart: always
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - ./minio:/data
+      - ./backend/uploads:/uploads
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------
+  # BACKEND (Flask)
+  # ---------------------------
+  backend:
+    build:
+      context: ./backend
+    container_name: diplomtrack_backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      FLASK_ENV: production
+      DATABASE_TYPE: postgres
+      DATABASE_URL: postgresql://diplomtrack:diplomtrack@postgres:5432/diplomtrack
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+
+      USE_MINIO: "true"
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_SECURE: "false"
+
+      MAIL_SERVER: smtp.gmail.com
+      MAIL_PORT: 465
+      MAIL_USE_TLS: "false"
+      MAIL_USE_SSL: "true"
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_DEFAULT_SENDER: ${MAIL_DEFAULT_SENDER}
+      
+      UPLOAD_FOLDER: uploads/profiles
+
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./backend/data:/app/data
+      - ./backend/uploads:/app/uploads
+    ports:
+      - "5000:5000"
+
+  # ---------------------------
+  # FRONTEND (Nginx)
+  # ---------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ./Dockerfile
+    container_name: diplomtrack_frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80"

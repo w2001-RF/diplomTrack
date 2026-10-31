@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 1000px; margin: 20px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { background-color: #2196F3; color: white; padding: 30px 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .header p { margin: 10px 0 0 0; opacity: 0.9; }
+        .content { padding: 30px 20px; }
+        .stats { display: flex; justify-content: space-around; margin: 30px 0; flex-wrap: wrap; }
+        .stat-card { background-color: #f9f9f9; padding: 20px; border-radius: 8px; text-align: center; flex: 1; margin: 10px; min-width: 150px; border: 1px solid #e0e0e0; }
+        .stat-number { font-size: 36px; font-weight: bold; color: #2196F3; margin-bottom: 5px; }
+        .stat-label { color: #666; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th { background-color: #2196F3; color: white; padding: 12px; text-align: left; font-weight: 600; }
+        td { padding: 12px; border-bottom: 1px solid #ddd; }
+        tr:hover { background-color: #f5f5f5; }
+        .section-title { color: #2196F3; margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid #2196F3; padding-bottom: 8px; font-size: 20px; }
+        .button { display: inline-block; padding: 12px 24px; background-color: #2196F3; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px; font-weight: 600; }
+        .footer { background-color: #f9f9f9; text-align: center; padding: 20px; font-size: 12px; color: #666; border-top: 1px solid #e0e0e0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Rapport Journalier DiplomTrack</h1>
+            <p>{report_date}</p>
+        </div>
+        <div class="content">
+            <p>Bonjour <strong>{admin_name}</strong>,</p>
+            <p>Voici le rapport journalier des tickets en retard.</p>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number">{total_delayed}</div>
+                    <div class="stat-label">Tickets en retard</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{agents_with_delays}</div>
+                    <div class="stat-label">Agents concernés</div>
+                </div>
+            </div>
+            <h2 class="section-title">📋 Résumé par Agent</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Agent</th>
+                        <th>Email</th>
+                        <th>Tickets en retard</th>
+                    </tr>
+                </thead>
+                <tbody>{agents_summary_rows}</tbody>
+            </table>
+            <h2 class="section-title">📝 Détail des Tickets en Retard</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Référence</th>
+                        <th>Agent</th>
+                        <th>Étudiant</th>
+                        <th>Retard</th>
+                        <th>Date de début</th>
+                    </tr>
+                </thead>
+                <tbody>{tickets_rows}</tbody>
+            </table>
+            <a href="{frontend_url}/admin/dashboard" class="button">Accéder au tableau de bord</a>
+            <p style="margin-top: 30px;">Cordialement,<br><strong>L'équipe DiplomTrack</strong></p>
+        </div>
+        <div class="footer">
+            <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
+            <p>&copy; {current_year} DiplomTrack. Tous droits réservés.</p>
+        </div>
+    </div>
+</body>
+</html>

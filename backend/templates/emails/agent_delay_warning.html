@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 800px; margin: 20px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { background-color: #ff9800; color: white; padding: 30px 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .content { padding: 30px 20px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th { background-color: #2196F3; color: white; padding: 12px; text-align: left; font-weight: 600; }
+        td { padding: 12px; border-bottom: 1px solid #ddd; }
+        tr:hover { background-color: #f5f5f5; }
+        .button { display: inline-block; padding: 12px 24px; background-color: #2196F3; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px; font-weight: 600; }
+        .footer { background-color: #f9f9f9; text-align: center; padding: 20px; font-size: 12px; color: #666; border-top: 1px solid #e0e0e0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ Rapport des Tickets en Retard</h1>
+        </div>
+        <div class="content">
+            <p>Bonjour <strong>{agent_name}</strong>,</p>
+            <p>Vous avez <strong>{count}</strong> ticket(s) en attente de réponse qui ont dépassé le délai d'avertissement.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Référence</th>
+                        <th>Étudiant</th>
+                        <th>Retard</th>
+                        <th>Date de début</th>
+                    </tr>
+                </thead>
+                <tbody>{tickets_rows}</tbody>
+            </table>
+            <p>Merci de traiter ces dossiers dans les plus brefs délais.</p>
+            <a href="{frontend_url}/tickets" class="button">Voir mes tickets</a>
+            <p style="margin-top: 30px;">Cordialement,<br><strong>L'équipe DiplomTrack</strong></p>
+        </div>
+        <div class="footer">
+            <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
+            <p>&copy; {current_year} DiplomTrack. Tous droits réservés.</p>
+        </div>
+    </div>
+</body>
+</html>
