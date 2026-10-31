@@ -1,7 +1,5 @@
 import os
 
-from tests.conftest import app
-
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 

@@ -21,9 +21,8 @@ Result: the hourly job and `POST /api/notifications/check-delays` always find 0 
 The first `gunicorn wsgi:app …` line runs in the foreground (single worker, no `exec`), so everything after it is never reached. That includes the intended `exec gunicorn -w 6`. `init_db.py` is also listed twice.
 **Fix:** keep only the final block (`python init_db.py` followed by `exec gunicorn -w 6 …`).
 
-### 4. `config.py` imports the test suite
-`from tests.conftest import app` is at the top of `config.py`. Production code then depends on `pytest` and test fixtures, and the import is unused.
-**Fix:** delete the line.
+### 4. ✅ Fixed: `config.py` imported the test suite
+Fixed in branch `fix/config-test-import`. The unused `from tests.conftest import app` at the top of `config.py` loaded `pytest` and the test fixtures every time the app started. It has been removed. Importing `config` no longer loads `pytest` or `tests.conftest`.
 
 ### 5. `minio` package missing from `requirements.txt`
 `utils/minio_client.py` does `from minio import Minio`, but only `boto3` is listed. With `USE_MINIO=true` (the Docker default), profile image upload and delete fail with `ModuleNotFoundError`.
