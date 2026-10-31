@@ -13,6 +13,7 @@ def init_scheduler(app):
     # Vérifier les délais toutes les heures
     scheduler.add_job(
         func=check_delay_warnings,
+        args=[app],
         trigger="interval",
         hours=1,
         id='check_delay_warnings',
@@ -36,13 +37,16 @@ def init_scheduler(app):
     
     return scheduler
 
-def check_delay_warnings():
+def check_delay_warnings(app):
     """
-    Fonction wrapper pour la vérification des délais
+    Fonction wrapper pour la vérification des délais.
+    Le job tourne dans un thread APScheduler : il faut pousser un
+    contexte applicatif pour accéder à la base de données.
     """
     try:
         logger.info("Début de la vérification des délais...")
-        count = NotificationService.check_and_create_delay_warnings()
+        with app.app_context():
+            count = NotificationService.check_and_create_delay_warnings()
         logger.info(f"Vérification terminée. {count} notification(s) créée(s)")
     except Exception as e:
         logger.error(f"Erreur lors de la vérification des délais: {str(e)}")
