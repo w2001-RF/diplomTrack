@@ -27,7 +27,6 @@ cd backend
 python -m venv .venv
 .venv\Scripts\activate          # Windows  (Linux/macOS: source .venv/bin/activate)
 pip install -r requirements.txt
-pip install minio               # missing from requirements.txt, see known-issues.md
 
 set FLASK_ENV=development       # PowerShell: $env:FLASK_ENV="development"
 python init_db.py               # creates backend/data/diplomtrack.db and seeds data

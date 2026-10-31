@@ -25,9 +25,8 @@ The first `gunicorn wsgi:app …` line runs in the foreground (single worker, no
 `from tests.conftest import app` is at the top of `config.py`. Production code then depends on `pytest` and test fixtures, and the import is unused.
 **Fix:** delete the line.
 
-### 5. `minio` package missing from `requirements.txt`
-`utils/minio_client.py` does `from minio import Minio`, but only `boto3` is listed. With `USE_MINIO=true` (the Docker default), profile image upload and delete fail with `ModuleNotFoundError`.
-**Fix:** add `minio` to `requirements.txt`, or rewrite the client with `boto3`.
+### 5. ✅ Fixed: `minio` package missing from `requirements.txt`
+Fixed in branch `fix/minio-dependency`. `utils/minio_client.py` imports `minio`, but only `boto3` was listed, so with `USE_MINIO=true` (the Docker default) profile image upload and delete failed with `ModuleNotFoundError`. `minio==7.2.20` is now pinned in `requirements.txt` and listed in `requirements-windows.txt`. `requirements.txt` was also converted from UTF-16 to UTF-8.
 
 ### 6. `Document.to_dict()` would crash
 It returns `self.document_type.value`, but `document_type` is a plain string column. It is not called today because routes use Marshmallow schemas, but any future caller would get an `AttributeError`.
@@ -55,7 +54,6 @@ The model comment documents `OPEN | BLOCKED | IN_PROGRESS | COMPLETED`, but the 
 
 - Leftover `print()` debug calls in `workflow_service.py` (for example `print(db.session.query)`). Use `logger.debug`.
 - Two different `ChronologyManager` classes exist (`workflow_service.py` and `ticket_service.py`).
-- `requirements.txt` is saved as UTF-16. Convert it to UTF-8 so it works with standard tooling and readable diffs.
 - Runtime data is mixed into the source tree: `postgres/`, `minio/`, `backend/logs/`, `backend/data/*.db`, `backend/uploads/`, `.venv/`, `.pytest_cache/`. The repo root is not a git repository (only `frontend/` is). When you initialize one, add a `.gitignore` that excludes these paths and `.env`.
 - Supabase leftovers in the frontend (`integrations/supabase`, `supabase/migrations`, `supabase.adapter.ts`, `data/mockData.ts`) and the Lovable template `frontend/README.md` can be removed once the REST backend is final.
 - Test coverage is limited to auth routes. The workflow engine (`update_status` and its validators) is the most valuable thing to test next.
