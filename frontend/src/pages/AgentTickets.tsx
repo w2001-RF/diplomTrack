@@ -8,11 +8,9 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useTicketsQuery } from '@/hooks/api/useTicketsQuery';
 import { Plus, Loader2, Ticket, Trash2, Upload, Clock } from 'lucide-react';
-import type { Database } from '@/integrations/supabase/types';
+import type { TicketStatus } from '@/lib/api/models';
 import { UserRole } from '@/constants/roles';
 import { TicketImportDialog } from '@/components/tickets/TicketImportDialog';
-
-type TicketStatus = Database['public']['Enums']['ticket_status'];
 
 const statusLabels: Record<TicketStatus, string> = {
   CREATED: 'Créé',

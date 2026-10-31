@@ -1,11 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { Database } from '@/integrations/supabase/types';
+import type { AppSettingRow, AppSettingUpdate } from '@/lib/api/models';
 import { toast } from 'sonner';
 import { CACHE_KEYS, defaultCacheConfig } from './useApiCache';
-
-type AppSettingRow = Database['public']['Tables']['app_settings']['Row'];
-type AppSettingUpdate = Database['public']['Tables']['app_settings']['Update'];
 
 /**
  * Hook to fetch all app settings

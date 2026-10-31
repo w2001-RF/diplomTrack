@@ -30,7 +30,7 @@ flowchart LR
 | `diplomtrack_postgres` | `postgres:16` | Main database. Data is bind-mounted to `./postgres` |
 | `diplomtrack_minio` | `minio/minio` | Object storage for profile images. Data is bind-mounted to `./minio` |
 
-Because Nginx proxies `/api`, the browser sees a single origin in production (`VITE_REST_API_URL=/api`). In development the SPA runs on `:8080` and calls `http://localhost:5000/api` directly, so the backend enables CORS for `localhost:8080`, `localhost:3000` and `127.0.0.1:8080`.
+The SPA always calls the same-origin `/api`. In production Nginx proxies it to `backend:5000`. In development the Vite dev server on `:8080` proxies it to `VITE_API_PROXY_TARGET` (default `http://localhost:5000`), so the browser never makes cross-origin calls. The backend's CORS list (`localhost:8080`, `localhost:3000`, `127.0.0.1:8080`) is only needed if you point `VITE_API_URL` at another origin.
 
 ## Backend
 
@@ -92,7 +92,7 @@ Document validation and invalidation in `DocumentService` can trigger transition
 |---|---|
 | Error handling | `exceptions.py` defines `APIException` and its subclasses (`ValidationError`, `AuthenticationError`, `AuthorizationError`, `NotFoundError`). Global handlers in `app.py` return `{error, code, status}`, plus a stack trace when `FLASK_ENV=development` |
 | Audit trail | `AuditService.log_action()` writes an `audit_logs` row and appends to a per-route file in `backend/logs/` (for example `api_tickets_1_transition.log`) |
-| In-app notifications | `NotificationService` stores `notifications` rows. The frontend polls them through `/api/notifications` |
+| In-app notifications | `NotificationService` stores `notifications` rows. The frontend polls `/api/notifications` every 60 seconds (there is no push channel) and marks them read with `PATCH /<id>/read` and `/read-all` |
 | Email | `EmailService` renders HTML templates stored in `AppConfig` (seeded from `templates/emails/*.html`) and sends them through Flask-Mail. Links use `FRONTEND_URL`. Nothing is sent when `enable_email_notifications` is off, and SMTP failures are logged without breaking the caller. There are three triggers: **ticket blocked** goes to the student when a ticket enters `ATTENTE_CORRECTION_DOCS`, sent after the commit and listing the documents and comments; **agent delay warning** goes to each agent whose tickets just received a delay warning; **admin daily report** goes out at 08:00 to `alerts_email`, or to every active admin if that is empty |
 | Scheduled jobs | APScheduler runs an hourly delay check for tickets waiting in `EN_ATTENTE_REPONSE` longer than `AppConfig.warning_delay_days`, plus the admin daily report at 08:00 (server time). Every Gunicorn worker calls `create_app()`, but a file lock (`SCHEDULER_LOCK_FILE`) makes sure only one process per container runs the scheduler |
 | Configuration | `config.py` reads environment variables. Business settings (delays, upload size, templates) live in the single-row `app_config` table and can be edited in the UI |
@@ -100,7 +100,7 @@ Document validation and invalidation in `DocumentService` can trigger transition
 
 ## Frontend
 
-The frontend is a React 18 + TypeScript SPA built with Vite. It was scaffolded with **Lovable**, which explains `lovable-tagger`, the shadcn/ui component set and the Supabase leftovers.
+The frontend is a React 18 + TypeScript SPA built with Vite, Tailwind and shadcn/ui. It talks only to the Flask API: the Lovable tooling and the Supabase client it was first generated with have been removed.
 
 ```
 src/
@@ -108,25 +108,31 @@ src/
 ├── components/
 │   ├── ui/           shadcn/ui primitives (Radix + Tailwind)
 │   ├── layout/       DashboardLayout, AppSidebar, NotificationsMenu
-│   ├── tickets/      TicketCard, WorkflowTimeline, TicketImportDialog
+│   ├── tickets/      WorkflowTimeline, TicketImportDialog
 │   ├── students/     StudentForm, ImportStudentsDialog
 │   └── …             admin/, documents/, dashboard/, common/
 ├── hooks/
-│   ├── api/          TanStack Query hooks per resource (useTicketsQuery, useStudents…)
+│   ├── api/          TanStack Query hooks per resource (useTicketsQuery, useStudentsQuery…)
 │   └── AuthProvider  Auth context, current user, role
-├── lib/api/          API abstraction layer (see below)
+├── lib/api/          API layer (see below)
 ├── constants/        UserRole enum
-└── types/            Shared TypeScript types
+└── types/            Older shared UI types
 ```
 
-### API abstraction (adapter pattern)
+### API layer
 
-`src/lib/api/` defines an `IApiClient` interface (`interfaces.ts`) with two adapters:
+Pages never call `fetch`. They use the TanStack Query hooks in `hooks/api/`, which call the `api` client from `src/lib/api/`:
 
-- `rest.adapter.ts` talks to the Flask backend. This is the adapter in use (`VITE_API_BACKEND="rest"`). It stores the JWT in `localStorage` and sends it as `Authorization: Bearer …`.
-- `supabase.adapter.ts` is the original Lovable/Supabase backend. It is kept but inactive, along with `src/integrations/supabase/` and `frontend/supabase/migrations/`.
+| File | Role |
+|---|---|
+| `index.ts` | Creates the shared `api` client. The base URL is `VITE_API_URL` (default `/api`) |
+| `http.ts` | `HttpClient`: the one place that adds `Authorization: Bearer <JWT>` (token in `localStorage`), encodes JSON or `FormData`, builds query strings and reads Flask error bodies (`error`, `message` or `msg`). A 401 on an authenticated request clears the token and emits `SESSION_EXPIRED`, which `AuthProvider` turns into a logout |
+| `adapters/rest.adapter.ts` | Implements `IApiClient` on top of `HttpClient`: CRUD helpers that map to `/api/<resource>[/<id>]`, plus `/api/auth/*` |
+| `interfaces.ts` | `IApiClient` = `data` (`getMany`, `getOne`, `create`, `update`, `delete`, `customRequest`…) + `auth`. Write another adapter against this interface to target a different server |
+| `models.ts` | Hand-written types for the API's resources (`TicketRow`, `StudentRow`, `NotificationRow`…) and enums (`TicketStatus` = backend milestone codes). Keep them in sync with `backend/schemas/` |
+| `types.ts` | Transport types: `ApiResponse`, `ApiError`, `QueryParams`, auth payloads |
 
-`index.ts` is a factory and singleton that picks the adapter from `VITE_API_BACKEND`. Pages never call `fetch` directly. They go through TanStack Query hooks in `hooks/api/`, which call `api.*`.
+`getMany` sends `QueryParams` the way `backend/routes/data_routes.py` parses them: `filter[<field>][eq]=…`, `sort=-created_at`, `page`, `limit`, `offset`. The backend only applies the `eq` operator. A list endpoint may return a plain array or `{data, count}`; both are accepted.
 
 ### Routing and access control
 
@@ -151,4 +157,4 @@ src/
 - **Explicit state machine.** Workflow rules live in one transition graph (`VALID_TRANSITIONS`) plus validator methods, rather than being spread across routes.
 - **Chronology table.** Every milestone visit is a `Chronologie` row with start and end timestamps. This feeds the timeline UI and delay detection, and lets "advanced" ticket creation backfill historical dates.
 - **Database portability.** `DATABASE_TYPE=sqlite` gives a no-dependency local setup. Docker uses PostgreSQL. Tables are created with `db.create_all()` on startup. Alembic and Flask-Migrate are installed but no migrations exist.
-- **Swappable frontend backend.** The adapter layer allowed the move from Supabase to the Flask API without rewriting pages.
+- **One HTTP client, one interface.** Hooks depend on `IApiClient`, and all transport details (base URL, JWT, error format) live in `http.ts`. This made it possible to drop the original Supabase backend without rewriting pages, and the same seam is where another backend would plug in.

@@ -1,6 +1,6 @@
 # Known issues and technical debt
 
-Found while reviewing the code on 2026-10-31. Ordered by impact. None of them has been fixed.
+Found while reviewing the code on 2026-10-31. Ordered by impact. Entries marked ✅ have been fixed; the branch that fixed each one is named in the entry.
 
 ## Bugs
 
@@ -26,6 +26,17 @@ It returns `self.document_type.value`, but `document_type` is a plain string col
 
 ### 7. Ticket status values are inconsistent
 The model comment documents `OPEN | BLOCKED | IN_PROGRESS | COMPLETED`, but the workflow writes `PENDING`. `BLOCKED` is never set, even though there is a "ticket blocked" email template. Pick one vocabulary and use it in the backend, the frontend filters and the notification queries.
+
+### 8. ✅ Fixed: frontend calls that did not match the Flask API
+Fixed in branch `refactor/frontend-python-backend`:
+- **Notifications.** The UI read `read`, but the API returns `is_read`, so every notification counted as unread. "Mark as read" called `PATCH /notifications/<id>` and "mark all" looped over it; neither route exists, the real ones are `PATCH /<id>/read` and `PATCH /read-all`. The list did not return `type` or `ticket_id`, so icons and links never worked (the backend now returns them, covered by `tests/test_notification_routes.py`). The Supabase realtime subscriptions are replaced by 60-second polling.
+- **Broken links.** Notification and dossier links went to `/ticket/<id>`, which is not a route. They now go to `/dossier/<id>`.
+- **Role change.** `AdminUsers` wrote to Supabase directly and compared lowercase role values with the uppercase `UserRole` enum, so promoting a user always failed. It now calls `PUT /api/admin/users/<id>`. Role badges, colors and icons also used lowercase keys and now show.
+- **Error messages.** Flask returns `{"error": …}`, but most adapter methods read `message`, so users saw "Request failed". All requests now go through one parser.
+- **Password change.** A failed `PUT /auth/reset-password` was reported as a success, because the pages read `data.error` while the adapter returned `error`.
+- **Expired sessions.** A 401 after the JWT expired (8 hours) left the user on the page with failing requests. It now logs them out.
+- **Uploads through Nginx.** Nginx's default 1 MB body limit was below Flask's 10 MB `MAX_CONTENT_LENGTH`; it is now 10 MB.
+- **`npm ci` failed** because `package-lock.json` was out of sync with `package.json`. The lockfile is regenerated.
 
 ## Incomplete features
 
@@ -54,5 +65,6 @@ The model comment documents `OPEN | BLOCKED | IN_PROGRESS | COMPLETED`, but the 
 - Leftover `print()` debug calls in `workflow_service.py` (for example `print(db.session.query)`). Use `logger.debug`.
 - Two different `ChronologyManager` classes exist (`workflow_service.py` and `ticket_service.py`).
 - Runtime data is mixed into the source tree: `postgres/`, `minio/`, `backend/logs/`, `backend/data/*.db`, `backend/uploads/`, `.venv/`, `.pytest_cache/`. The repo root is not a git repository (only `frontend/` is). When you initialize one, add a `.gitignore` that excludes these paths and `.env`.
-- Supabase leftovers in the frontend (`integrations/supabase`, `supabase/migrations`, `supabase.adapter.ts`, `data/mockData.ts`) and the Lovable template `frontend/README.md` can be removed once the REST backend is final.
+- ✅ **Fixed: Lovable and Supabase leftovers.** Removed in branch `refactor/frontend-python-backend`, together with `lovable-tagger`, `@supabase/supabase-js`, the Bun lockfile and the unused mock pages. See [architecture.md](architecture.md#api-layer) for the resulting API layer.
+- **The frontend does not pass a full typecheck.** `npm run typecheck` reports about 155 errors, all older than the refactor: they were hidden because `src/types/database.ts` had syntax errors that stopped `tsc` early, and Vite builds without type-checking. Most come from the pages using fields the types don't declare (for example `student.formation`, `milestone.order`, the `{tickets, total}` shape of the paginated ticket list) and from status-label maps that miss some milestone codes. Fix them page by page, starting with `TicketDetail.tsx` (65 errors). `npm run lint` reports 51 older problems.
 - Test coverage is limited to auth routes. The workflow engine (`update_status` and its validators) is the most valuable thing to test next.

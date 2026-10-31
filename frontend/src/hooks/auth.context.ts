@@ -1,7 +1,6 @@
 import { createContext } from 'react';
 import { UserRole } from '@/constants/roles';
 import type { AuthUser } from '@/lib/api/types';
-import { AnyRecord } from 'dns';
 
 export type AppRole = UserRole;
 
@@ -14,7 +13,7 @@ export interface AuthContextType {
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  resetPassword: (newPassword: string) => Promise<{ data: AnyRecord | null }>;
+  resetPassword: (newPassword: string) => Promise<{ data: Record<string, unknown> | null; error: Error | null }>;
   uploadProfileImage: (file: File) => Promise<{ error: Error | null; data?: { profile_image: string } }>;
   deleteProfileImage: () => Promise<{ error: Error | null }>;
   getProfileImageUrl: () => string | null;

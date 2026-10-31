@@ -41,6 +41,9 @@ def list_notifications():
     return [
         {
             "id": n.id,
+            "user_id": n.user_id,
+            "ticket_id": n.ticket_id,
+            "type": n.type,
             "title": n.title,
             "message": n.message,
             "is_read": n.is_read,

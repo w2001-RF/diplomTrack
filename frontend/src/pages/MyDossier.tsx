@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Clock, CheckCircle, XCircle, AlertTriangle, Loader2, Edit2, Save, X, Bell } from 'lucide-react';
-import type { Database } from '@/integrations/supabase/types';
+import type { StudentRow as Student, TicketRow as Ticket, MilestoneRow as Milestone, TicketStatus } from '@/lib/api/models';
 import { FORMATIONS, PROFESSEURS, getAnneeUniversitaires } from '@/data/formations';
 import { 
   useStudentByUserQuery
@@ -19,11 +19,6 @@ import { useTicketsQuery } from '@/hooks/api/useTicketsQuery';
 import { useNotificationsQuery } from '@/hooks/api/useNotificationsQuery';
 import { useMilestonesQuery } from '@/hooks/api/useMilestonesQuery';
 import { useState } from 'react';
-
-type Student = Database['public']['Tables']['students']['Row'];
-type Ticket = Database['public']['Tables']['tickets']['Row'];
-type Milestone = Database['public']['Tables']['milestones']['Row'];
-type TicketStatus = Database['public']['Enums']['ticket_status'];
 
 interface Notification {
   id: string;
@@ -323,7 +318,7 @@ export default function MyDossier() {
                             })}
                           </CardDescription>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => navigate(`/ticket/${ticket.id}`)}>
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/dossier/${ticket.id}`)}>
                           Voir détails
                         </Button>
                       </div>
@@ -382,19 +377,19 @@ export default function MyDossier() {
                                 <div 
                                   key={notification.id}
                                   className={`p-3 rounded-lg border ${
-                                    !notification.read ? 'bg-primary/5 border-primary/20' : 'bg-muted/50'
+                                    !notification.is_read ? 'bg-primary/5 border-primary/20' : 'bg-muted/50'
                                   }`}
                                 >
                                   <div className="flex items-start justify-between">
                                     <div>
-                                      <p className={`text-sm ${!notification.read ? 'font-semibold' : 'font-medium'}`}>
+                                      <p className={`text-sm ${!notification.is_read ? 'font-semibold' : 'font-medium'}`}>
                                         {notification.title}
                                       </p>
                                       <p className="text-sm text-muted-foreground mt-0.5">
                                         {notification.message}
                                       </p>
                                     </div>
-                                    {!notification.read && (
+                                    {!notification.is_read && (
                                       <Badge variant="default" className="text-xs">Nouveau</Badge>
                                     )}
                                   </div>

@@ -1,13 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { Database } from '@/integrations/supabase/types';
+import type { UserRoleRow, UserRoleInsert, UserRoleUpdate, AppRole } from '@/lib/api/models';
 import { toast } from 'sonner';
 import { CACHE_KEYS, defaultCacheConfig } from './useApiCache';
-
-type UserRoleRow = Database['public']['Tables']['user_roles']['Row'];
-type UserRoleInsert = Database['public']['Tables']['user_roles']['Insert'];
-type UserRoleUpdate = Database['public']['Tables']['user_roles']['Update'];
-type AppRole = Database['public']['Enums']['app_role'];
 
 /**
  * Hook to fetch all user roles (for admin)

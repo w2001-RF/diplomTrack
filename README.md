@@ -40,7 +40,7 @@ diplomtrack/
 │   ├── utils/          Constants (workflow graph), RBAC decorator, MinIO client
 │   ├── tests/          pytest suite
 │   └── init_db.py      Creates tables and seeds reference data
-├── frontend/           React SPA (originally generated with Lovable)
+├── frontend/           React SPA (talks to the Flask API through src/lib/api)
 ├── nginx/              Reverse-proxy config
 ├── postgres/, minio/   Docker bind-mounted data volumes (runtime data, not source)
 ├── docs/               Project documentation

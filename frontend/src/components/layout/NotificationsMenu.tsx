@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCircle, AlertCircle, Info, Clock, Check, Trash2, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,11 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotificationsQuery } from '@/hooks/api';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import type { Database } from '@/integrations/supabase/types';
-
-type NotificationRow = Database['public']['Tables']['notifications']['Row'];
+import type { NotificationRow } from '@/lib/api/models';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -59,42 +55,15 @@ export function NotificationsMenu() {
     loading,
     markAsRead,
     markAllAsRead,
-    deleteNotification,
-    addNotification
-  } = useNotificationsQuery({ userId: user?.id });
-
-  // Subscribe to realtime notifications
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const channel = supabase
-      .channel('notifications-menu')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          addNotification(payload.new as NotificationRow);
-          toast.info('Nouvelle notification reçue');
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id, addNotification]);
+    deleteNotification
+  } = useNotificationsQuery({ userId: user?.id, notifyOnNew: true });
 
   const handleNotificationClick = (notification: NotificationRow) => {
-    if (!notification.read) {
+    if (!notification.is_read) {
       markAsRead(notification.id);
     }
     if (notification.ticket_id) {
-      navigate(`/ticket/${notification.ticket_id}`);
+      navigate(`/dossier/${notification.ticket_id}`);
       setOpen(false);
     }
   };
@@ -163,7 +132,7 @@ export function NotificationsMenu() {
                   <DropdownMenuItem
                     className={cn(
                       'flex items-start gap-3 p-3 cursor-pointer',
-                      !notification.read && 'bg-primary/5'
+                      !notification.is_read && 'bg-primary/5'
                     )}
                     onClick={() => handleNotificationClick(notification)}
                   >
@@ -174,11 +143,11 @@ export function NotificationsMenu() {
                       <div className="flex items-start justify-between gap-2">
                         <p className={cn(
                           'text-sm leading-tight',
-                          !notification.read ? 'font-semibold' : 'font-medium'
+                          !notification.is_read ? 'font-semibold' : 'font-medium'
                         )}>
                           {notification.title}
                         </p>
-                        {!notification.read && (
+                        {!notification.is_read && (
                           <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1" />
                         )}
                       </div>

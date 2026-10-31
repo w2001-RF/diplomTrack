@@ -64,6 +64,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setMustResetPassword(false);
       setLoading(false);
     }
+
+    // The API answered 401 to an authenticated request: the JWT expired
+    const subscription = api.auth.onAuthStateChange((event) => {
+      if (event === 'SESSION_EXPIRED') {
+        setUser(null);
+        setRole(null);
+        setMustResetPassword(false);
+      }
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
@@ -110,17 +120,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const resetPassword = async (newPassword: string) => {
     try {
 
-      const data = await api.auth.resetPassword(newPassword);
+      const result = await api.auth.resetPassword(newPassword);
 
-      if (!data?.error && user) {
+      if (!result.error && user) {
         setUser({ ...user, must_reset_password: false });
         setMustResetPassword(false);
       }
 
-      return data;
+      return result;
     } catch (err) {
-      return { 
-        error: err instanceof Error ? err : new Error('Une erreur est survenue') 
+      return {
+        data: null,
+        error: err instanceof Error ? err : new Error('Une erreur est survenue')
       };
     }
   };

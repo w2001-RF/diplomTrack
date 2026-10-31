@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,13 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Bell, CheckCircle, AlertCircle, Info, Clock, Check, Trash2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
 import { useNotificationsQuery } from '@/hooks/api';
-import type { Database } from '@/integrations/supabase/types';
-
-type NotificationRow = Database['public']['Tables']['notifications']['Row'];
+import type { NotificationRow } from '@/lib/api/models';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -52,39 +47,12 @@ export default function AgentNotifications() {
     markAsRead,
     markAllAsRead,
     deleteNotification,
-    deleteAllNotifications,
-    addNotification
+    deleteAllNotifications
   } = useNotificationsQuery({ userId: user?.id });
-
-  // Subscribe to realtime notifications
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const channel = supabase
-      .channel('agent-notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          addNotification(payload.new as NotificationRow);
-          toast.info('Nouvelle notification reçue');
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id, addNotification]);
 
   const handleNotificationClick = (notification: NotificationRow) => {
     if (notification.ticket_id) {
-      navigate(`/ticket/${notification.ticket_id}`);
+      navigate(`/dossier/${notification.ticket_id}`);
     }
   };
 
@@ -165,7 +133,7 @@ export default function AgentNotifications() {
                     key={notification.id}
                     className={cn(
                       'flex items-start gap-4 p-4 transition-colors hover:bg-muted/50',
-                      !notification.read && 'bg-primary/5',
+                      !notification.is_read && 'bg-primary/5',
                       notification.ticket_id && 'cursor-pointer'
                     )}
                     onClick={() => handleNotificationClick(notification)}
@@ -178,7 +146,7 @@ export default function AgentNotifications() {
                         <div>
                           <p className={cn(
                             'text-sm',
-                            !notification.read ? 'font-semibold text-foreground' : 'font-medium text-foreground'
+                            !notification.is_read ? 'font-semibold text-foreground' : 'font-medium text-foreground'
                           )}>
                             {notification.title}
                           </p>
@@ -186,7 +154,7 @@ export default function AgentNotifications() {
                             {notification.message}
                           </p>
                         </div>
-                        {!notification.read && (
+                        {!notification.is_read && (
                           <Badge variant="default" className="flex-shrink-0 text-xs">
                             Nouveau
                           </Badge>
@@ -198,7 +166,7 @@ export default function AgentNotifications() {
                           {formatTimeAgo(notification.created_at)}
                         </span>
                         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                          {!notification.read && (
+                          {!notification.is_read && (
                             <Button
                               variant="ghost"
                               size="sm"

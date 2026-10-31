@@ -32,15 +32,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import type { Database } from '@/integrations/supabase/types';
+import type { TicketStatus, DocumentType, DocumentStatus } from '@/lib/api/models';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 
 import { UserRole } from '@/constants/roles';
-
-type TicketStatus = Database['public']['Enums']['ticket_status'];
-type DocumentType = Database['public']['Enums']['document_type'];
-type DocumentStatus = Database['public']['Enums']['document_status'];
 
 const statusLabels: Record<TicketStatus, string> = {
   CREATED: 'Créé',
