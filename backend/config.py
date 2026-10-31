@@ -32,7 +32,16 @@ class Config:
     # ---------------------------
     # JWT
     # ---------------------------
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "super-secret-key")
+    # Anyone who knows the key can forge tokens for any role: refuse to start
+    # without one, except in local development
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+    if not JWT_SECRET_KEY:
+        if not DEBUG:
+            raise RuntimeError(
+                "JWT_SECRET_KEY is not set. Set it in the environment "
+                "(or FLASK_ENV=development for a local dev key)."
+            )
+        JWT_SECRET_KEY = "dev-only-insecure-jwt-key"
     JWT_ACCESS_TOKEN_EXPIRES = 60 * 60 * 8  # 8 hours
 
     # ---------------------------
@@ -53,7 +62,7 @@ class Config:
     MAIL_USE_SSL = os.getenv('MAIL_USE_SSL', 'false').lower() == 'true'
     MAIL_USERNAME = os.getenv('MAIL_USERNAME')
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
-    MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'wassim.rifay@uit.ac.ma')
+    MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', MAIL_USERNAME)
     MAIL_MAX_EMAILS = None
     MAIL_ASCII_ATTACHMENTS = False
 

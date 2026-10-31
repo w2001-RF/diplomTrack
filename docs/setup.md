@@ -12,7 +12,7 @@ docker compose up --build
 | http://localhost | SPA through Nginx (`/api` is proxied to the backend) |
 | http://localhost:5000/api | Flask API |
 | http://localhost:9001 | MinIO console |
-| localhost:5432 | PostgreSQL (`diplomtrack` / `diplomtrack`) |
+| 127.0.0.1:5432 | PostgreSQL (`diplomtrack` / your `POSTGRES_PASSWORD`) |
 
 On startup the backend container (`backend/entrypoint.sh`) waits for Postgres and runs `python init_db.py`, which creates tables and seeds reference data and is safe to re-run. It then `exec`s Gunicorn with `GUNICORN_WORKERS` workers (default 6). If initialization fails, the container exits instead of serving.
 
@@ -63,11 +63,13 @@ Only `tests/test_auth_routes.py` exists at the moment.
 
 ## Default account
 
+`init_db.py` creates one admin account the first time it runs:
+
 | Email | Password | Role |
 |---|---|---|
-| `admin@uit.ac.ma` | `123456` | ADMIN (must change password at first login) |
+| `ADMIN_EMAIL` (default `admin@uit.ac.ma`) | `ADMIN_PASSWORD`, or a random password printed once in the `init_db.py` output | ADMIN (must change password at first login) |
 
-Change this password immediately on any shared or deployed instance.
+These variables only matter the first time. If the admin account already exists, it is left unchanged.
 
 ## Environment variables
 
@@ -75,11 +77,16 @@ Change this password immediately on any shared or deployed instance.
 
 | Variable | Purpose |
 |---|---|
-| `JWT_SECRET_KEY` | Secret for signing JWTs. **Required in production.** The code falls back to `super-secret-key` |
+| `JWT_SECRET_KEY` | **Required.** Secret for signing JWTs |
+| `POSTGRES_PASSWORD` | **Required.** Database password, also used in `DATABASE_URL`, so keep it URL-safe |
+| `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD` | **Required.** MinIO root credentials, also used by the backend |
+| `ADMIN_PASSWORD` | Optional initial admin password (see [Default account](#default-account)) |
 | `MAIL_USERNAME`, `MAIL_PASSWORD` | SMTP credentials (Gmail app password) |
-| `MAIL_DEFAULT_SENDER` | From address |
+| `MAIL_DEFAULT_SENDER` | From address (defaults to `MAIL_USERNAME`) |
 
-Do not commit `.env`.
+`.env.example` lists all of these. Do not commit `.env`.
+
+> **Upgrading an existing install:** Postgres sets the password only when `./postgres` is first initialized. If your data was created with the old hard-coded `diplomtrack` password, either set `POSTGRES_PASSWORD=diplomtrack` for now, or change it first with `docker compose exec postgres psql -U diplomtrack -c "ALTER USER diplomtrack PASSWORD '<new>'"`.
 
 ### Backend (`backend/config.py`)
 
@@ -87,8 +94,9 @@ Do not commit `.env`.
 |---|---|---|
 | `FLASK_ENV` | — | `development` enables debug mode and stack traces in error responses |
 | `DATABASE_TYPE` | `sqlite` | Anything else uses `DATABASE_URL` |
-| `DATABASE_URL` | `postgresql://diplomtrack:diplomtrack@postgres:5432/diplomtrack` | |
-| `JWT_SECRET_KEY` | `super-secret-key` | Override it |
+| `DATABASE_URL` | `postgresql://diplomtrack:diplomtrack@postgres:5432/diplomtrack` | Compose builds it from `POSTGRES_PASSWORD` |
+| `JWT_SECRET_KEY` | none | The app refuses to start without it, unless `FLASK_ENV=development` (then a dev-only key is used) |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | `admin@uit.ac.ma` / random | Used once, when `init_db.py` creates the admin |
 | `USE_MINIO` | `false` | `true` stores profile images in MinIO |
 | `MINIO_ENDPOINT` / `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` / `MINIO_SECURE` / `MINIO_BUCKET` | `minio:9000` / `minioadmin` / `minioadmin` / `false` / `uploads` | |
 | `MAIL_SERVER` / `MAIL_PORT` | `smtp.gmail.com` / `465` | |

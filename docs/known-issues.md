@@ -36,8 +36,14 @@ The model comment documents `OPEN | BLOCKED | IN_PROGRESS | COMPLETED`, but the 
 
 ## Security and configuration
 
-- **Weak defaults.** The seeded admin password is `123456` (a reset is forced at login), `JWT_SECRET_KEY` falls back to `super-secret-key`, and MinIO and Postgres use default credentials in `docker-compose.yml`. Move all secrets to `.env` and fail at startup if `JWT_SECRET_KEY` is unset in production.
-- **The default mail sender** is hard-coded in `config.py` to a personal address. Make it environment-only.
+- ✅ **Fixed: weak defaults.** Fixed in branch `fix/insecure-defaults`. The changes:
+  - The seeded admin password comes from `ADMIN_PASSWORD`, or is randomly generated and printed once, instead of `123456`.
+  - The app refuses to start without `JWT_SECRET_KEY` unless `FLASK_ENV=development`.
+  - Postgres and MinIO credentials come from required `.env` variables (Compose fails fast if they are missing), and both services only listen on `127.0.0.1`.
+  - The mail sender defaults to `MAIL_USERNAME` instead of a hard-coded personal address.
+  - `.env.example` documents every variable.
+
+  Covered by `tests/test_secure_defaults.py`. The admin password of an existing database is unchanged.
 - **CORS origins** are hard-coded in `app.py`. Read them from configuration.
 - **JWT in `localStorage`** is readable by any script that runs on the page (XSS). An httpOnly cookie would be more robust.
 - **The ownership checks** on `/api/auth/upload-profile-image/<user_id>`, `/delete-profile-image/<user_id>`, `PATCH /tickets/<id>/diploma-validation-type` and `POST /tickets/<id>/submit-corrected-documents` should be reviewed. These routes have no `@require_roles` and accept a client-supplied id.
