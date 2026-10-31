@@ -133,4 +133,6 @@ A ticket gets a warning when:
 - its current milestone is `EN_ATTENTE_REPONSE`, and
 - its open chronology on that milestone (`ended_at IS NULL`) started more than `AppConfig.warning_delay_days` ago (14 by default).
 
-The warning goes to the ticket's `user_id` (the agent who created it). It is repeated at most once every 24 hours per ticket.
+The warning goes to the ticket's `user_id` (the agent who created it). It is repeated at most once every 24 hours per ticket. Each agent with newly warned tickets also gets one summary email, and a daily report of all overdue tickets is emailed to the admins at 08:00.
+
+When a ticket enters `ATTENTE_CORRECTION_DOCS`, the student is emailed (the "ticket blocked" template) with the list of documents to correct and the agent's comments.

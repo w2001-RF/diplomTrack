@@ -165,6 +165,34 @@ class WorkflowNotifier:
                    "Le type de validation a été automatiquement changé en Diplôme."
         )
 
+    @staticmethod
+    def send_correction_email(ticket: Ticket) -> None:
+        """Email the student that the dossier is blocked until documents are corrected"""
+        from services.email_service import EmailService
+        from services.document_service import DocumentValidator
+
+        student = ticket.student
+        if not student:
+            return
+        student_email = student.email or (student.user.email if student.user else None)
+        if not student_email:
+            logger.info(f"No email for student of ticket {ticket.reference}; skipping blocked email")
+            return
+
+        reasons = [
+            f"{doc.document_type}: {doc.validation_comment}" if doc.validation_comment else doc.document_type
+            for doc in ticket.documents
+            if DocumentValidator.is_auto_validated_document(doc.document_type) and doc.is_validated is False
+        ]
+
+        EmailService.send_ticket_blocked_notification(
+            student_email=student_email,
+            student_name=f"{student.first_name} {student.last_name}",
+            ticket_reference=ticket.reference,
+            ticket_id=ticket.id,
+            reason="Documents à corriger : " + ", ".join(reasons) if reasons else "Documents à corriger"
+        )
+
 class ChronologyManager:
     """Manages chronology entries for tickets"""
     
@@ -423,7 +451,12 @@ def update_status(
     db.session.commit()
     print(db.session.query)
     print(is_new, chronologie.milestone.code, chronologie.status)
-    
+
+    # Emails are sent after the commit so an SMTP problem never rolls back
+    # the transition (send_email logs and returns False on failure)
+    if next_state_code == "ATTENTE_CORRECTION_DOCS":
+        notifier.send_correction_email(ticket)
+
     # Log avec information sur création/mise à jour
     action = "created" if is_new else "updated"
     logger.info(

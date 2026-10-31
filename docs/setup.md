@@ -97,6 +97,7 @@ Do not commit `.env`.
 | `UPLOAD_FOLDER` | `uploads/profiles` | Local avatar folder |
 | `ENABLE_SCHEDULER` | `true` | `false` disables the background jobs (useful for tests or extra API replicas) |
 | `SCHEDULER_LOCK_FILE` | `<system temp>/diplomtrack-scheduler.lock` | Lock file that elects the single process that runs the scheduler |
+| `FRONTEND_URL` | `http://localhost` | Base URL used for links in emails |
 
 `MAX_CONTENT_LENGTH` is fixed at 10 MB per request.
 

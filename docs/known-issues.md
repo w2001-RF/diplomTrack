@@ -32,7 +32,7 @@ The model comment documents `OPEN | BLOCKED | IN_PROGRESS | COMPLETED`, but the 
 
 ## Incomplete features
 
-- **Emails are never triggered.** `EmailService.send_ticket_blocked_notification`, `send_agent_delay_warning` and `send_admin_daily_report` are fully implemented and their templates are seeded, but nothing calls them except the admin test endpoints. `enable_email_notifications` and `email_check_interval_hours` are not used.
+- ✅ **Fixed: emails were never triggered.** Fixed in branch `fix/email-notifications`. All three emails are now sent (see [architecture.md](architecture.md#cross-cutting-concerns)), and the template links point to real SPA routes (`/dossier/<id>`, `/dossiers`, `/admin`). Existing databases keep their old template copies in `app_config`, so re-save the templates in **Admin → Settings** to pick up the corrected links. Still open: `email_check_interval_hours` is not used, and the delay check stays hourly.
 - **Documents carry no file content.** `POST /api/documents/` accepts a `file_path` string only. There is no binary upload for dossier documents, only for profile images.
 - **`auto_archive_days`** is stored but no archiving job exists.
 - **No migrations.** Flask-Migrate and Alembic are installed, but the schema relies on `db.create_all()`, which never alters existing tables. Adding a column to a model will not update an existing Postgres database.
