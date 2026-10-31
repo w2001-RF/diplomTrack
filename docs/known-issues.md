@@ -4,14 +4,10 @@ Found while reviewing the code on 2026-10-31. Ordered by impact. None of them ha
 
 ## Bugs
 
-### 1. Delay warnings never fire
-`services/notification_service.py` → `check_and_create_delay_warnings()`
+### 1. ✅ Fixed: delay warnings never fired
+Fixed in branch `fix/delay-warnings`. The check used to look for `status='IN_PROGRESS'` (never set by the workflow) and for a `DONE` chronology (a waiting ticket's chronology is `PENDING`), so it always found 0 tickets. The scheduled job also ran without a Flask app context, so it would have crashed on its first query.
 
-- It selects tickets with `status='IN_PROGRESS'`, but the workflow never sets that value. `WorkflowManager.update_ticket_status` only sets `OPEN`, `PENDING` or `COMPLETED`.
-- It then looks for a chronology on `EN_ATTENTE_REPONSE` with `status == 'DONE'`. While the ticket is still waiting on that milestone, its chronology is `PENDING`.
-
-Result: the hourly job and `POST /api/notifications/check-delays` always find 0 tickets.
-**Fix:** filter on `current_milestone_id` only (or `status='PENDING'`), and use the chronology that is still open (`ended_at IS NULL`).
+It now selects tickets by `current_milestone_id` only and uses the chronology that is still open (`ended_at IS NULL`). The job pushes `app.app_context()`, and the 24-hour dedup only looks at earlier *delay* warnings, so other `warning` notifications don't suppress it. Covered by `tests/test_delay_warnings.py`.
 
 ### 2. The scheduler runs once per Gunicorn worker
 `app.py` starts APScheduler inside `create_app()`. `entrypoint.sh` launches Gunicorn with `-w 6`, so six schedulers run the same job. Once issue 1 is fixed, every warning would be created six times.

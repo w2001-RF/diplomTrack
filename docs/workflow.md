@@ -126,6 +126,11 @@ References are generated as `FC-` followed by 8 uppercase hex characters.
 
 ## Delay warnings
 
-Every hour, `tasks/scheduler.check_delay_warnings` calls `NotificationService.check_and_create_delay_warnings()`. The intent is to warn when a ticket has been in `EN_ATTENTE_REPONSE` longer than `AppConfig.warning_delay_days` (14 by default). An admin can also trigger the check by hand with `POST /api/notifications/check-delays`.
+Every hour, `tasks/scheduler.check_delay_warnings` calls `NotificationService.check_and_create_delay_warnings()` inside an app context. An admin can also trigger the check by hand with `POST /api/notifications/check-delays`.
 
-> As currently written, this check never matches any ticket. See [known-issues.md](known-issues.md#1-delay-warnings-never-fire).
+A ticket gets a warning when:
+
+- its current milestone is `EN_ATTENTE_REPONSE`, and
+- its open chronology on that milestone (`ended_at IS NULL`) started more than `AppConfig.warning_delay_days` ago (14 by default).
+
+The warning goes to the ticket's `user_id` (the agent who created it). It is repeated at most once every 24 hours per ticket.

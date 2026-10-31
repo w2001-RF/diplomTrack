@@ -28,21 +28,23 @@ class NotificationService:
         # Calculer la date limite
         warning_date = datetime.utcnow() - timedelta(days=warning_delay)
         
-        # Récupérer tous les tickets en EN_ATTENTE_REPONSE
+        # Récupérer tous les tickets actuellement en EN_ATTENTE_REPONSE.
+        # Le milestone courant suffit : le workflow met le statut à PENDING,
+        # jamais à IN_PROGRESS.
         tickets = Ticket.query.filter_by(
-            current_milestone_id=milestone.id,
-            status='IN_PROGRESS'  # ou le statut approprié
+            current_milestone_id=milestone.id
         ).all()
-        
+
         notifications_created = 0
-        
+
         for ticket in tickets:
-            # Récupérer la chronologie correspondante
+            # Récupérer la chronologie encore ouverte pour ce milestone
+            # (status PENDING, ended_at NULL tant que le ticket y est)
             chronologie = Chronologie.query.filter(
                 and_(
                     Chronologie.ticket_id == ticket.id,
                     Chronologie.milestone_id == milestone.id,
-                    Chronologie.status == 'DONE'
+                    Chronologie.ended_at.is_(None)
                 )
             ).order_by(Chronologie.started_at.desc()).first()
             
@@ -51,12 +53,14 @@ class NotificationService:
             
             # Vérifier si le délai est dépassé
             if chronologie.started_at <= warning_date:
-                # Vérifier si une notification n'a pas déjà été créée
+                # Vérifier si une notification de délai n'a pas déjà été créée
+                # (les autres alertes 'warning' du ticket ne comptent pas)
                 last_notification = Notification.query.filter(
                     and_(
                         Notification.ticket_id == ticket.id,
                         Notification.user_id == ticket.user_id,
-                        Notification.type == 'warning'
+                        Notification.type == 'warning',
+                        Notification.title.like('%Délai dépassé%')
                     )
                 ).order_by(Notification.created_at.desc()).first()
                 
