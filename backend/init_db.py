@@ -8,6 +8,7 @@ from services.audit_service import AuditService
 # Import ALL models here
 from models import *
 from utils.security import hash_password
+from utils.passwords import generate_secure_password
 
 import os
 
@@ -136,17 +137,24 @@ def seed_admin_user():
     print("👤 Seeding admin user...")
 
     admin_username = "admin"
-    admin_email = "admin@uit.ac.ma"
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@uit.ac.ma")
 
     admin = User.query.filter_by(username=admin_username).first()
     if admin:
         print("ℹ️ Admin user already exists")
         return
 
+    # Initial password: ADMIN_PASSWORD, or a random one printed once.
+    # Either way it must be changed at first login.
+    admin_password = os.getenv("ADMIN_PASSWORD")
+    if not admin_password:
+        admin_password = generate_secure_password(16)
+        print(f"🔑 Generated initial admin password (shown once): {admin_password}")
+
     admin = User(
         username=admin_username,
         email=admin_email,
-        password_hash=hash_password("123456"),
+        password_hash=hash_password(admin_password),
         role="ADMIN",
         must_reset_password=True,
         is_active=True

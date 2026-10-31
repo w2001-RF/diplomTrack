@@ -49,13 +49,10 @@ diplomtrack/
 
 ## Quick start (Docker)
 
-1. Create a `.env` file at the repo root:
+1. Copy `.env.example` to `.env` and fill it in. `JWT_SECRET_KEY`, `POSTGRES_PASSWORD`, `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` are required, and Compose refuses to start without them. To generate random values:
 
-   ```env
-   JWT_SECRET_KEY=change-me-to-a-long-random-string
-   MAIL_USERNAME=you@example.com
-   MAIL_PASSWORD=your-smtp-app-password
-   MAIL_DEFAULT_SENDER=you@example.com
+   ```sh
+   python -c "import secrets; print(secrets.token_urlsafe(32))"
    ```
 
 2. Start everything:
@@ -67,9 +64,11 @@ diplomtrack/
 3. Open the services:
    - Application: http://localhost
    - API: http://localhost:5000/api
-   - MinIO console: http://localhost:9001 (`minioadmin` / `minioadmin`)
+   - MinIO console: http://localhost:9001 (your `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD`)
 
-4. Log in with the seeded admin account, **`admin@uit.ac.ma` / `123456`**. You must change the password on first login.
+   Postgres and MinIO only listen on `127.0.0.1`.
+
+4. Log in as **`admin@uit.ac.ma`**. The password is `ADMIN_PASSWORD` from `.env`. If you left that empty, a random password is printed once in the backend logs (`docker compose logs backend | grep "admin password"`). You must change it at first login.
 
 For local development without Docker, see [docs/setup.md](docs/setup.md).
 
