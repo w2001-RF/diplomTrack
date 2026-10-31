@@ -15,9 +15,8 @@ Fixed in branch `fix/single-scheduler`. `create_app()` runs in every Gunicorn wo
 ### 3. ✅ Fixed: `entrypoint.sh` started Gunicorn twice
 Fixed in branch `fix/entrypoint`. A leftover single-worker `gunicorn` line ran in the foreground, so the intended `exec gunicorn -w 6` was never reached and `init_db.py` was listed twice. The script now waits for Postgres, runs `init_db.py` once, and `exec`s Gunicorn so it gets container signals as PID 1. The worker count comes from `GUNICORN_WORKERS` (default 6), and `set -e` stops the container if initialization fails. A new `.gitattributes` keeps `*.sh` files on LF line endings, because a Windows checkout with CRLF would break the script inside the Linux container.
 
-### 4. `config.py` imports the test suite
-`from tests.conftest import app` is at the top of `config.py`. Production code then depends on `pytest` and test fixtures, and the import is unused.
-**Fix:** delete the line.
+### 4. ✅ Fixed: `config.py` imported the test suite
+Fixed in branch `fix/config-test-import`. The unused `from tests.conftest import app` at the top of `config.py` loaded `pytest` and the test fixtures every time the app started. It has been removed. Importing `config` no longer loads `pytest` or `tests.conftest`.
 
 ### 5. `minio` package missing from `requirements.txt`
 `utils/minio_client.py` does `from minio import Minio`, but only `boto3` is listed. With `USE_MINIO=true` (the Docker default), profile image upload and delete fail with `ModuleNotFoundError`.
