@@ -64,6 +64,18 @@ def init_scheduler(app):
         replace_existing=True
     )
     
+    # Rapport journalier des retards envoyé aux admins à 8h00
+    scheduler.add_job(
+        func=send_daily_report,
+        args=[app],
+        trigger="cron",
+        hour=8,
+        minute=0,
+        id='send_admin_daily_report',
+        name='Rapport journalier admin',
+        replace_existing=True
+    )
+
     # Ou vérifier tous les jours à 9h00
     # scheduler.add_job(
     #     func=check_delay_warnings,
@@ -93,3 +105,15 @@ def check_delay_warnings(app):
         logger.info(f"Vérification terminée. {count} notification(s) créée(s)")
     except Exception as e:
         logger.error(f"Erreur lors de la vérification des délais: {str(e)}")
+
+
+def send_daily_report(app):
+    """
+    Fonction wrapper pour le rapport journalier envoyé aux admins
+    """
+    try:
+        with app.app_context():
+            sent = NotificationService.send_admin_daily_report()
+        logger.info(f"Rapport journalier envoyé à {sent} destinataire(s)")
+    except Exception as e:
+        logger.error(f"Erreur lors de l'envoi du rapport journalier: {str(e)}")
