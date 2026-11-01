@@ -186,3 +186,15 @@ describe('auth service', () => {
     expect(client().auth.getProfileImageUrl(2)).toBe(`${API}/auth/profile-image/2`);
   });
 });
+
+describe('paginated envelopes', () => {
+  it.each(['students', 'documents', 'tickets'])('getMany unwraps {%s, total}', async (key) => {
+    server.use(http.get(`${API}/${key}`, () => HttpResponse.json({ [key]: [{ id: 1 }, { id: 2 }], total: 7, page: 1 })));
+
+    const { data, count, error } = await client().data.getMany(key);
+
+    expect(error).toBeNull();
+    expect(data).toEqual([{ id: 1 }, { id: 2 }]);
+    expect(count).toBe(7);
+  });
+});

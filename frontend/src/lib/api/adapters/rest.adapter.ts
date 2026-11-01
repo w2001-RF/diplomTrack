@@ -34,16 +34,18 @@ class RestDataService implements IDataService {
   }
 
   async getMany<T>(resource: string, params?: QueryParams): Promise<ApiResponse<T[]>> {
-    const { data, error } = await this.http.request<T[] | { data?: T[]; items?: T[]; count?: number; total?: number }>(
+    const { data, error } = await this.http.request<T[] | { [key: string]: unknown; count?: number; total?: number }>(
       resource,
       { query: params }
     );
     if (error) return { data: [], error };
 
-    // Routes return either a plain array or a paginated {data|items, count|total}
+    // Routes return a plain array or a paginated envelope whose list sits under
+    // one key: {data|items|tickets|students|documents: [...], count|total}
     if (Array.isArray(data)) return { data, error: null };
+    const list = Object.values(data ?? {}).find(Array.isArray) as T[] | undefined;
     return {
-      data: data?.data || data?.items || [],
+      data: list ?? [],
       error: null,
       count: data?.count ?? data?.total,
     };

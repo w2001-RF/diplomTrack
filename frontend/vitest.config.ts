@@ -19,6 +19,8 @@ export default defineConfig({
     // MSW handlers in src/test/server.ts listen on the same origin.
     env: { VITE_API_URL: "http://api.test/api" },
     restoreMocks: true,
+    // vi.stubGlobal (e.g. fetch) must not leak into the next test
+    unstubGlobals: true,
     coverage: {
       provider: "v8",
       include: ["src/lib/**", "src/hooks/**", "src/components/ProtectedRoute.tsx", "src/components/RootRedirect.tsx"],

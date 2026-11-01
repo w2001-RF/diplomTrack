@@ -18,6 +18,7 @@ frontend/qa/requirements.txt installed.
 import argparse
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -32,12 +33,25 @@ BACKEND_DIR = FRONTEND_DIR.parent / "backend"
 ADMIN_PASSWORD = "QaAdmin-2026!"  # must match qa/resources/variables.resource
 
 
-def wait_for(url, name, process=None, timeout=90):
+def port_in_use(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(1)
+        return sock.connect_ex(("127.0.0.1", port)) == 0
+
+
+def tail(log_path, lines=30):
+    try:
+        return "\n".join(Path(log_path).read_text(encoding="utf-8", errors="replace").splitlines()[-lines:])
+    except OSError:
+        return "(no log)"
+
+
+def wait_for(url, name, process=None, log_path=None, timeout=90):
     """Poll until `url` answers (any HTTP status counts as up)."""
     deadline = time.time() + timeout
     while time.time() < deadline:
         if process is not None and process.poll() is not None:
-            sys.exit(f"{name} exited early with code {process.returncode}; see the log above")
+            sys.exit(f"{name} exited early with code {process.returncode}. End of {log_path}:\n{tail(log_path)}")
         try:
             urllib.request.urlopen(url, timeout=2)
             return
@@ -45,7 +59,7 @@ def wait_for(url, name, process=None, timeout=90):
             return
         except OSError:
             time.sleep(0.5)
-    sys.exit(f"{name} did not answer at {url} within {timeout}s")
+    sys.exit(f"{name} did not answer at {url} within {timeout}s. End of {log_path}:\n{tail(log_path)}")
 
 
 def stop(process):
@@ -58,7 +72,14 @@ def stop(process):
         process.kill()
 
 
-def start_stack(args, workdir):
+def start_stack(args, workdir, logs_dir):
+    # Otherwise the health check would succeed against whatever already listens
+    # there (another QA run, a dev server) and the suite would seed that one
+    for port, flag in ((args.api_port, "--api-port"), (args.web_port, "--web-port")):
+        if port_in_use(port):
+            sys.exit(f"[qa] port {port} is already in use (another QA run or a dev server?). "
+                     f"Stop it or choose another port with {flag}.")
+
     env = {
         **os.environ,
         "FLASK_ENV": "development",
@@ -73,17 +94,26 @@ def start_stack(args, workdir):
         "PYTHONUTF8": "1",
     }
 
+    # Server output goes to log files so the console only shows Robot's results
+    backend_log = logs_dir / "backend.log"
+    frontend_log = logs_dir / "frontend.log"
     print(f"[qa] database: {env['DATABASE_URL']}")
-    subprocess.run([args.python, "init_db.py"], cwd=BACKEND_DIR, env=env, check=True,
-                   stdout=subprocess.DEVNULL)
+    print(f"[qa] server logs: {backend_log}, {frontend_log}")
+
+    with open(backend_log, "w", encoding="utf-8") as log:
+        init = subprocess.run([args.python, "init_db.py"], cwd=BACKEND_DIR, env=env,
+                              stdout=log, stderr=subprocess.STDOUT)
+    if init.returncode:
+        sys.exit(f"init_db.py failed. End of {backend_log}:\n{tail(backend_log)}")
 
     backend = subprocess.Popen(
         [args.python, "-m", "flask", "--app", "wsgi:app", "run",
          "--host", "127.0.0.1", "--port", str(args.api_port)],
         cwd=BACKEND_DIR, env=env,
+        stdout=open(backend_log, "a", encoding="utf-8"), stderr=subprocess.STDOUT,
     )
     api_url = f"http://127.0.0.1:{args.api_port}/api"
-    wait_for(f"{api_url}/milestones", "Flask API", backend)
+    wait_for(f"{api_url}/milestones", "Flask API", backend, backend_log)
 
     node = shutil.which("node")
     if not node:
@@ -94,10 +124,11 @@ def start_stack(args, workdir):
          "--port", str(args.web_port), "--strictPort"],
         cwd=FRONTEND_DIR,
         env={**os.environ, "VITE_API_URL": "/api", "VITE_API_PROXY_TARGET": f"http://127.0.0.1:{args.api_port}"},
+        stdout=open(frontend_log, "w", encoding="utf-8"), stderr=subprocess.STDOUT,
     )
     base_url = f"http://127.0.0.1:{args.web_port}"
     try:
-        wait_for(base_url, "Vite dev server", frontend)
+        wait_for(base_url, "Vite dev server", frontend, frontend_log)
     except SystemExit:
         stop(backend)
         raise
@@ -124,7 +155,9 @@ def main():
                 parser.error("--base-url needs --api-url")
             base_url, api_url = args.base_url.rstrip("/"), args.api_url.rstrip("/")
         else:
-            backend, frontend, base_url, api_url = start_stack(args, workdir)
+            logs_dir = Path(args.outputdir)
+            logs_dir.mkdir(parents=True, exist_ok=True)
+            backend, frontend, base_url, api_url = start_stack(args, workdir, logs_dir)
 
         command = [
             sys.executable, "-m", "robot",

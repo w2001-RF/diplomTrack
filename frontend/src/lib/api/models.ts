@@ -89,16 +89,14 @@ export interface DocumentRow {
 export type DocumentInsert = Pick<DocumentRow, 'ticket_id' | 'type' | 'file_name'> & Partial<DocumentRow>;
 export type DocumentUpdate = Partial<DocumentRow>;
 
-/** GET /api/milestones */
+/** GET /api/milestones (MilestoneSerializer in backend/routes/data_routes.py) */
 export interface MilestoneRow {
   id: string;
   code: TicketStatus;
   label: string;
   description: string | null;
-  ordre: number;
-  delai_max: number;
+  order: number;
   is_terminal: boolean | null;
-  created_at: string;
 }
 
 /** /api/notifications (scoped to the current user by the JWT) */

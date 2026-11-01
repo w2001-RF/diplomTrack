@@ -17,6 +17,8 @@ Seed Test Data
     ${agent_token}=    Log In Through API    ${AGENT_EMAIL}    ${AGENT_PASSWORD}
     Change Password Through API    ${agent_token}    ${AGENT_PASSWORD}
 
+    Create Student Record Through API    ${agent_token}    Yasmine    ${LISTED_STUDENT_LAST_NAME}
+
     Create User Through API    ${admin_token}    qa.newagent    ${NEW_AGENT_EMAIL}    ${NEW_AGENT_PASSWORD}    AGENT
     Create User Through API    ${admin_token}    qa.student    ${STUDENT_EMAIL}    ${STUDENT_PASSWORD}    STUDENT
 
@@ -31,6 +33,15 @@ Change Password Through API
     ${headers}=    Create Dictionary    Authorization=Bearer ${token}
     ${body}=    Create Dictionary    password=${password}
     PUT On Session    api    /auth/reset-password    json=${body}    headers=${headers}    expected_status=200
+
+Create Student Record Through API
+    [Arguments]    ${token}    ${first_name}    ${last_name}
+    ${headers}=    Create Dictionary    Authorization=Bearer ${token}
+    ${formations}=    GET On Session    api    /formations    headers=${headers}    expected_status=200
+    ${formation_id}=    Set Variable    ${formations.json()}[data][0][id]
+    ${body}=    Create Dictionary    first_name=${first_name}    last_name=${last_name}
+    ...    formation_id=${formation_id}    academic_year=2025-2026
+    POST On Session    api    /students    json=${body}    headers=${headers}    expected_status=201
 
 Create User Through API
     [Arguments]    ${token}    ${username}    ${email}    ${password}    ${role}

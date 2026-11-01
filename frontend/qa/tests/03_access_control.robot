@@ -44,6 +44,14 @@ Agent Can Open Staff Pages
         Location Should Eventually Be    ${path}
     END
 
+Agent Sees Records Created Through The API
+    [Documentation]    Collection URLs without a trailing slash used to answer 308; the
+    ...                browser followed it cross-origin without the token and the list stayed empty.
+    [Tags]    smoke    lists
+    Log In As    ${AGENT_EMAIL}    ${AGENT_PASSWORD}    /agent
+    Open Page    /students
+    Wait Until Page Contains    ${LISTED_STUDENT_LAST_NAME}
+
 Unknown Page Shows Not Found
     Open Page    /this-page-does-not-exist
     Wait Until Page Contains    Page not found

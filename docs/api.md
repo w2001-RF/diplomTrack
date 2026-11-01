@@ -4,7 +4,17 @@ Base URL: `/api` (in development: `http://localhost:5000/api`).
 
 All endpoints except signup, login and profile image retrieval need the header `Authorization: Bearer <JWT>`. The **Roles** column lists the roles accepted by `@require_roles`. A dash (—) means any authenticated user. Students are further restricted to their own records inside the handlers.
 
-Errors come back as `{"error": "...", "code": ..., "status": ...}` or `{"message": "..."}`.
+Errors come back as `{"error": "...", "code": ..., "status": ...}` or `{"message": "..."}`. Status codes the SPA relies on:
+
+| Status | When |
+|---|---|
+| 401 | Missing, malformed or expired JWT (all token problems, including ones Flask-JWT-Extended would answer with 422). The SPA logs the user out |
+| 403 | Authenticated, but the role is not allowed |
+| 409 | The resource already exists, for example a duplicate username or email (`ConflictError`, code 4091) |
+
+Collection URLs work with or without a trailing slash (`/api/tickets` and `/api/tickets/`); there is no redirect.
+
+List endpoints return either a plain array or an envelope with the list under one key, such as `{"tickets": [...], "total": 12, "pages": 2, "page": 1, "length": 10}` or `{"data": [...], "count": 12}`.
 
 ## Auth: `/api/auth`
 

@@ -144,7 +144,7 @@ export default function AgentDashboard() {
 
           <Card>
             <CardContent className="p-0">
-              {recentTickets?.total === 0 ? (
+              {!recentTickets?.length ? (
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                   <Ticket className="h-12 w-12 mb-4 opacity-50" />
                   <p>Aucun dossier</p>
