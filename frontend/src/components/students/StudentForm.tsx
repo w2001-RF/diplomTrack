@@ -48,7 +48,7 @@ export function StudentForm({
     if (initialData?.formation_id) {
       const formation = formations.find(f => String(f.id) === String(initialData.formation_id));
       if (formation?.formation_type?.code) {
-        setFormationType(formation?.formation_type?.code);
+        setFormationType(formation.formation_type.code as FormationTypeCode);
       }
     }
   }, [initialData, formations]);

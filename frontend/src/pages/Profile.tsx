@@ -88,18 +88,18 @@ export default function Profile() {
   const handleProfileImageUpload = async (file: File) => {
     const { error } = await uploadProfileImage(file);
     if (error) {
-      toast.error(error.message);
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
-      toast.success('Image uploadée avec succès');
+      toast({ title: "Succès", description: 'Image uploadée avec succès' });
     }
   };
 
   const handleProfileImageDelete = async () => {
     const { error } = await deleteProfileImage();
     if (error) {
-      toast.error(error.message);
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
-      toast.success('Image supprimée avec succès');
+      toast({ title: "Succès", description: 'Image supprimée avec succès' });
     }
   };
 

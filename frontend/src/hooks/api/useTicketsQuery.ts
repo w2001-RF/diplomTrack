@@ -1,14 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/api/pagination';
-import type { TicketRow, TicketInsert, TicketUpdate, StudentRow, TicketStatus } from '@/lib/api/models';
+import type { TicketRow, TicketInsert, StudentRow } from '@/lib/api/models';
 import { toast } from 'sonner';
 import { CACHE_KEYS, defaultCacheConfig } from './useApiCache';
 
 
 export interface TicketWithStudent extends TicketRow {
   student?: StudentRow;
-  initial_milestone_code?: String | null;
+  initial_milestone_code?: string | null;
 }
 
 /** GET /api/tickets (get_tickets in backend/routes/ticket_routes.py) */
@@ -61,7 +61,7 @@ export function useTicketsQuery(options: UseTicketsQueryOptions = {}) {
   // Mutation for creating tickets
   const createMutation = useMutation({
     mutationFn: async (data: TicketInsert) => {
-      const { data: ticket, error } = await api.data.create<TicketWithStudent>('tickets', data);
+      const { data: ticket, error } = await api.data.customRequest<TicketWithStudent>('tickets', { method: 'POST', body: data });
       if (error) throw new Error(error.message);
       return ticket;
     },
@@ -91,7 +91,7 @@ export function useTicketsQuery(options: UseTicketsQueryOptions = {}) {
 
   // Mutation for importing tickets
   const importMutation = useMutation({
-    mutationFn: async (data: { tickets: any[] }) => {
+    mutationFn: async (data: { tickets: object[] }) => {
       const { data: result, error } = await api.data.import('tickets', data);
       if (error) throw new Error(error.message);
       return result;

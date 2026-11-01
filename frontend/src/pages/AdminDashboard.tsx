@@ -53,7 +53,8 @@ interface StatusDistribution {
   color: string;
 }
 
-const statusLabels: Record<TicketStatus, string> = {
+// Short labels for the chart; other codes fall back to the code
+const statusLabels: Partial<Record<TicketStatus, string>> = {
   CREATED: 'Créé',
   DOSSIER_EN_COURS: 'En cours',
   PIECES_COMPLETES: 'Complet',

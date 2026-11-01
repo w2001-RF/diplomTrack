@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { milestoneCodeOf } from '@/lib/tickets';
+import { milestoneCodeOf, STATUS_LABELS } from '@/lib/tickets';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
@@ -19,7 +19,7 @@ import { useUpdateProfile } from '@/hooks/api/useProfilesQuery';
 import { useTicketsQuery } from '@/hooks/api/useTicketsQuery';
 import { useNotificationsQuery } from '@/hooks/api/useNotificationsQuery';
 import { useMilestonesQuery } from '@/hooks/api/useMilestonesQuery';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface Notification {
   id: string;
@@ -31,17 +31,7 @@ interface Notification {
   created_at: string;
 }
 
-const statusLabels: Record<TicketStatus, string> = {
-  CREATED: 'Créé',
-  DOSSIER_EN_COURS: 'Dossier en cours',
-  PIECES_COMPLETES: 'Pièces complètes',
-  EN_ATTENTE_REPONSE: 'En attente de réponse',
-  REPONSE_RECUE: 'Réponse reçue',
-  DOSSIER_CLOTURE: 'Dossier clôturé',
-  BLOQUE_PIECE_MANQUANTE: 'Bloqué - pièce manquante',
-  REJETE: 'Rejeté',
-  ARCHIVE: 'Archivé'
-};
+const statusLabels = STATUS_LABELS;
 
 const getStatusColor = (status: TicketStatus) => {
   switch (status) {
@@ -76,10 +66,7 @@ export default function MyDossier() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [editingContact, setEditingContact] = useState(false);
-  const [contactForm, setContactForm] = useState({
-    email: '',
-    phone: ''
-  });
+  const [contactForm, setContactForm] = useState({ email: '' });
 
   // Fetch student by user_id
   const studentQuery = useStudentByUserQuery(user?.id);
@@ -101,21 +88,21 @@ export default function MyDossier() {
   const updateProfileMutation = useUpdateProfile();
 
   // Determine loading state
-  const isLoading = studentQuery.isLoading || milestonesQuery.isLoading;
+  const isLoading = studentQuery.isLoading || milestonesQuery.loading;
 
-  // Update contact form when student data is loaded
-  if (student && (contactForm.email === '' && contactForm.phone === '')) {
-    setContactForm({
-      email: student.email
-    });
-  }
+  // Fill the contact form once the student record has loaded
+  const studentEmail = student?.email ?? '';
+  useEffect(() => {
+    setContactForm({ email: studentEmail });
+  }, [studentEmail]);
 
   const handleSaveContact = async () => {
-    if (!student) return;
+    if (!student || !user) return;
 
     try {
+      // A profile shares its id with the user; the student record id is another table's
       await updateProfileMutation.mutateAsync({
-        profileId: student.id,
+        profileId: String(user.id),
         data: {
           email: contactForm.email
         }
@@ -253,15 +240,6 @@ export default function MyDossier() {
                         onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
                       />
                     </div>
-                    {/* <div className="space-y-2">
-                      <Label htmlFor="phone">Téléphone</Label>
-                      <Input
-                        id="phone"
-                        value={contactForm.phone}
-                        onChange={(e) => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
-                        placeholder="+212 6XX XXX XXX"
-                      />
-                    </div> */}
                     <div className="flex gap-2">
                       <Button onClick={handleSaveContact} disabled={updateProfileMutation.isPending} className="flex-1">
                         {updateProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}

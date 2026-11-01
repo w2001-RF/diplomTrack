@@ -15,20 +15,11 @@ import {
   Loader2,
   TrendingUp
 } from 'lucide-react';
+import { STATUS_LABELS } from '@/lib/tickets';
 import type { TicketStatus } from '@/lib/api/models';
 import { useAuth } from '@/hooks/useAuth';
 
-const statusLabels: Record<TicketStatus, string> = {
-  CREATED: 'Créé',
-  DOSSIER_EN_COURS: 'Dossier en cours',
-  PIECES_COMPLETES: 'Pièces complètes',
-  EN_ATTENTE_REPONSE: 'En attente de réponse',
-  REPONSE_RECUE: 'Réponse reçue',
-  DOSSIER_CLOTURE: 'Dossier clôturé',
-  BLOQUE_PIECE_MANQUANTE: 'Bloqué - pièce manquante',
-  REJETE: 'Rejeté',
-  ARCHIVE: 'Archivé'
-};
+const statusLabels = STATUS_LABELS;
 
 const getStatusColor = (status: TicketStatus) => {
   switch (status) {
@@ -48,8 +39,7 @@ const getStatusColor = (status: TicketStatus) => {
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
-  const {user} = useAuth();
-  const { tickets, loading, isRefetching } = useTicketsQuery(user?.id);
+  const { tickets, loading, isRefetching } = useTicketsQuery();
 
   const stats = {
     total: tickets?.total,

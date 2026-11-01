@@ -13,12 +13,11 @@ import type { UserRole } from '@/constants/roles';
 
 export type AppRole = UserRole;
 
-export type DocumentStatus = 'PENDING' | 'VALIDATED' | 'REJECTED';
-
+/** DocumentType in backend/utils/constants.py */
 export type DocumentType =
   | 'BAC'
-  | 'BAC_PLUS_2'
-  | 'BAC_PLUS_3'
+  | 'BAC+2'
+  | 'BAC+3'
   | 'CIN'
   | 'CONTRAT'
   | 'RECU_PAIEMENT'
@@ -44,8 +43,6 @@ export type TicketStatus =
   | 'EN_ATTENTE_REPONSE'
   | 'REPONSE_RECUE'
   | 'DOSSIER_CLOTURE'
-  | 'VALIDATION_CFC'
-  | 'ENVOYE_DEPARTEMENT_DIPLOMES'
   | 'BLOQUE_PIECE_MANQUANTE'
   | 'REJETE'
   | 'ARCHIVE';
@@ -70,23 +67,19 @@ export interface AppSettingRow {
 /** PATCH /api/app_settings/<id> takes {<key>: value} */
 export type AppSettingUpdate = Record<string, unknown>;
 
-/** /api/documents */
+/** /api/documents (DocumentSchema in backend/schemas/document_schema.py) */
 export interface DocumentRow {
-  id: string;
-  ticket_id: string;
-  type: DocumentType;
-  file_name: string;
-  file_url: string | null;
-  status: DocumentStatus;
-  rejection_reason: string | null;
+  id: number;
+  ticket_id: number;
+  document_type: DocumentType;
+  /** Stored file name, or null until a file is uploaded */
+  file_path: string | null;
+  is_validated: boolean;
+  validation_comment: string | null;
+  validated_by: number | null;
   validated_at: string | null;
-  validated_by: string | null;
-  uploaded_at: string;
   created_at: string;
-  updated_at: string;
 }
-export type DocumentInsert = Pick<DocumentRow, 'ticket_id' | 'type' | 'file_name'> & Partial<DocumentRow>;
-export type DocumentUpdate = Partial<DocumentRow>;
 
 /** GET /api/milestones (MilestoneSerializer in backend/routes/data_routes.py) */
 export interface MilestoneRow {
@@ -124,23 +117,33 @@ export interface ProfileRow {
 }
 export type ProfileUpdate = Partial<ProfileRow>;
 
+/** Nested professor (ProfessorMiniSchema in backend/schemas/ticket_schema.py) */
+export interface ProfessorSummary {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email?: string | null;
+  phone?: string | null;
+  departement?: { id: number; name: string } | null;
+}
+
 /** Nested formation (FormationMiniSchema in backend/schemas/ticket_schema.py) */
 export interface FormationSummary {
   id: number;
   formation_name: string;
   description?: string | null;
   formation_type?: { id?: number; code: string; label?: string } | null;
-  professor_responsible?: { id: number; first_name: string; last_name: string; email?: string | null; phone?: string | null } | null;
+  professor_responsible?: ProfessorSummary | null;
 }
 
 /** /api/students */
 export interface StudentRow {
   id: number;
-  user_id: string;
+  user_id: number | null;
   first_name: string;
   last_name: string;
-  num_apogee: string;
-  email: string;
+  num_apogee: number | null;
+  email: string | null;
   phone: string | null;
   formation_id: number | null;
   formation?: FormationSummary | null;
@@ -174,11 +177,34 @@ export interface TicketRow {
   /** Coarse state from the API (OPEN | PENDING | COMPLETED); use current_milestone.code for the workflow position */
   status: TicketStatus | 'OPEN' | 'PENDING' | 'COMPLETED';
   current_milestone_id: string | null;
-  current_milestone?: Pick<MilestoneRow, 'id' | 'code' | 'label'> | null;
+  current_milestone?: Pick<MilestoneRow, 'id' | 'code' | 'label'> & Partial<MilestoneRow> | null;
+  diploma_validation_type?: DiplomaValidationType | null;
+  /** GET /api/tickets/<id> only */
+  chronologies?: ChronologyRow[];
   created_at: string;
   updated_at: string;
 }
-export type TicketInsert = Pick<TicketRow, 'student_id'> & Partial<TicketRow>;
+
+export type DiplomaValidationType = 'DIPLOMA' | 'ATTESTATION';
+
+/** A milestone a ticket went through (TicketFormatter.format_chronologies) */
+export interface ChronologyRow {
+  id: number;
+  ticket_id: number;
+  milestone_id: number;
+  milestone: MilestoneRow;
+  status: string;
+  started_at: string | null;
+  ended_at: string | null;
+  comment: string | null;
+}
+/** POST /api/tickets (TicketCreateSchema) */
+export interface TicketInsert {
+  student_id: number | string;
+  initial_milestone_code: string;
+  created_at?: string;
+  comment?: string;
+}
 export type TicketUpdate = Partial<TicketRow>;
 
 /** GET /api/user_roles */

@@ -5,8 +5,6 @@ import { toast } from 'sonner';
 import { CACHE_KEYS, defaultCacheConfig } from './useApiCache';
 
 export interface MilestoneHistoryWithDetails extends MilestoneHistoryRow {
-  from_milestone?: MilestoneRow | null;
-  to_milestone?: MilestoneRow | null;
   changed_by_profile?: { full_name: string | null; email: string } | null;
 }
 
@@ -82,7 +80,7 @@ export function useMilestoneHistoryQuery(ticketId: string | undefined) {
       const enrichedHistory: MilestoneHistoryWithDetails[] = await Promise.all(
         (historyData || []).map(async (h) => {
           const fromMilestone = h.from_milestone || null;
-          const toMilestone = h.to_milestone || null;
+          const toMilestone = h.to_milestone;
 
           // Get profile info
           const { data: profileData } = await api.data.getMany<ProfileRow>('profiles', {

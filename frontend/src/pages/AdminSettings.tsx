@@ -399,7 +399,7 @@ export default function AdminSettings() {
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">
               Dernière modification: {settings.length > 0 ? 
-                new Date(settings.filter(s => s.key === 'updated_at')[0]?.value || '')
+                new Date(String(settings.find(s => s.key === 'updated_at')?.value ?? ''))
                   .toLocaleDateString('fr-FR', {
                     day: 'numeric',
                     month: 'long',

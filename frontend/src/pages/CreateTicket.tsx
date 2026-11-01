@@ -10,7 +10,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useStudentsQuery, useMilestonesQuery, useTicketsQuery } from '@/hooks/api';
 import { useFormationsQuery  } from '@/hooks/api/useFormationsQuery';
 import { useAuth } from '@/hooks/useAuth';
-import { StudentRow } from '@/types/database';
+import type { StudentRow } from '@/lib/api/models';
 
 
 const FILTERS_CACHE_KEY = 'create_ticket_filters';
@@ -136,7 +136,7 @@ export default function CreateTicket() {
       const matchesSearch = 
         student.last_name.toLowerCase().includes(q) ||
         student.first_name.toLowerCase().includes(q) ||
-        student.num_apogee?.toLowerCase().includes(q);
+        String(student.num_apogee ?? '').includes(q);
 
       if (!matchesSearch) return false;
 
@@ -173,7 +173,7 @@ export default function CreateTicket() {
     
     const ticket = await createTicket({
       student_id: selectedStudent.id,
-      initial_milestone_code: firstMilestone?.code || null,
+      initial_milestone_code: firstMilestone?.code || 'CREATED',
     });
 
     if (ticket) {
@@ -415,17 +415,17 @@ export default function CreateTicket() {
                         {student.formation?.formation_name && ` • ${student.formation.formation_name}`}
                         {student.formation?.formation_type?.code && ` (${student.formation.formation_type.code})`}
                       </p>
-                      {student.formation?.professeur_responsable && (
+                      {student.formation?.professor_responsible && (
                         <p className="text-sm text-muted-foreground">
-                          Professeur Responsable: {student.formation.professeur_responsable.first_name} {student.formation.professeur_responsable.last_name}
-                          {student.formation.professeur_responsable.email && (
+                          Professeur Responsable: {student.formation.professor_responsible.first_name} {student.formation.professor_responsible.last_name}
+                          {student.formation.professor_responsible.email && (
                             <>
-                              <br /> {student.formation.professeur_responsable.email}
+                              <br /> {student.formation.professor_responsible.email}
                             </>
                           )}
-                          {student.formation.professeur_responsable.phone && (
+                          {student.formation.professor_responsible.phone && (
                             <>
-                              <br /> {student.formation.professeur_responsable.phone}
+                              <br /> {student.formation.professor_responsible.phone}
                             </>
                           )}
                         </p>
@@ -455,7 +455,7 @@ export default function CreateTicket() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">CNE</p>
-                  <p className="font-medium">{selectedStudent.numero_apogee}</p>
+                  <p className="font-medium">{selectedStudent.num_apogee}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Formation</p>
