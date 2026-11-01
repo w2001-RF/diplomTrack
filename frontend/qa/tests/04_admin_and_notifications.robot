@@ -24,6 +24,18 @@ Admin Can Search Users
     Wait Until Page Does Not Contain    ${AGENT_EMAIL}
     Page Should Contain    ${STUDENT_EMAIL}
 
+Admin Promotes A Student To Agent
+    [Documentation]    The role dialog existed but had no button to open it.
+    Log In As    ${ADMIN_EMAIL}    ${ADMIN_PASSWORD}    /admin
+    Open Page    /users
+    ${row}=    Set Variable    xpath://tr[td[contains(., "${PROMOTE_EMAIL}")]]
+    Wait Until Element Contains    ${row}    Étudiant
+    Click Button    ${row}//button[@aria-label="Modifier le rôle"]
+    Wait Until Element Is Visible    xpath://div[@role="dialog" and contains(., "Modifier le rôle")]
+    Click Button    xpath://div[@role="dialog"]//button[normalize-space()="Enregistrer"]
+    Toast Should Show    mis à jour en Agent BFC
+    Wait Until Element Contains    ${row}    Agent BFC
+
 Notification Menu Opens With An Empty State
     [Tags]    notifications
     Log In As    ${AGENT_EMAIL}    ${AGENT_PASSWORD}    /agent

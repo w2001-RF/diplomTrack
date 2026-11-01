@@ -21,6 +21,11 @@ Seed Test Data
 
     Create User Through API    ${admin_token}    qa.newagent    ${NEW_AGENT_EMAIL}    ${NEW_AGENT_PASSWORD}    AGENT
     Create User Through API    ${admin_token}    qa.student    ${STUDENT_EMAIL}    ${STUDENT_PASSWORD}    STUDENT
+    Create User Through API    ${admin_token}    qa.promote    ${PROMOTE_EMAIL}    ${STUDENT_PASSWORD}    STUDENT
+    ${student_token}=    Log In Through API    ${STUDENT_EMAIL}    ${STUDENT_PASSWORD}
+    ${student_user_id}=    Current User Id    ${student_token}
+    Create Student Record Through API    ${agent_token}    ${LIFECYCLE_FIRST_NAME}    ${LIFECYCLE_LAST_NAME}
+    ...    email=${STUDENT_EMAIL}    user_id=${student_user_id}
 
 Log In Through API
     [Arguments]    ${email}    ${password}
@@ -35,13 +40,33 @@ Change Password Through API
     PUT On Session    api    /auth/reset-password    json=${body}    headers=${headers}    expected_status=200
 
 Create Student Record Through API
-    [Arguments]    ${token}    ${first_name}    ${last_name}
+    [Arguments]    ${token}    ${first_name}    ${last_name}    &{extra}
     ${headers}=    Create Dictionary    Authorization=Bearer ${token}
     ${formations}=    GET On Session    api    /formations    headers=${headers}    expected_status=200
     ${formation_id}=    Set Variable    ${formations.json()}[data][0][id]
     ${body}=    Create Dictionary    first_name=${first_name}    last_name=${last_name}
-    ...    formation_id=${formation_id}    academic_year=2025-2026
+    ...    formation_id=${formation_id}    academic_year=2025-2026    &{extra}
     POST On Session    api    /students    json=${body}    headers=${headers}    expected_status=201
+
+Current User Id
+    [Arguments]    ${token}
+    ${headers}=    Create Dictionary    Authorization=Bearer ${token}
+    ${session}=    GET On Session    api    /auth/session    headers=${headers}    expected_status=200
+    RETURN    ${{ int($session.json()['user']['id']) }}
+
+Attach Scanned Documents Through API
+    [Documentation]    Gives every required document of a ticket a file. The SPA has no file
+    ...                upload for dossier documents yet (docs/known-issues.md), so this is the
+    ...                one lifecycle step done through the API. Attaching resets validation.
+    [Arguments]    ${ticket_id}
+    ${token}=    Log In Through API    ${AGENT_EMAIL}    ${AGENT_PASSWORD}
+    ${headers}=    Create Dictionary    Authorization=Bearer ${token}
+    ${missing}=    GET On Session    api    /documents/ticket/${ticket_id}/missing    headers=${headers}
+    FOR    ${doc_type}    IN    @{missing.json()}[missing_documents]
+        ${body}=    Create Dictionary    ticket_id=${{ int(${ticket_id}) }}    document_type=${doc_type}
+        ...    file_path=/uploads/qa/${doc_type}.pdf
+        POST On Session    api    /documents    json=${body}    headers=${headers}    expected_status=201
+    END
 
 Create User Through API
     [Arguments]    ${token}    ${username}    ${email}    ${password}    ${role}
