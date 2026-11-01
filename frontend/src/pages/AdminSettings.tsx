@@ -69,9 +69,11 @@ const settingLabels: Record<string, string> = {
   email_check_interval_hours: 'Intervalle de vérification (heures)'
 };
 
+type SettingValue = string | number | boolean;
+
 export default function AdminSettings() {
   const { settings, loading, isSaving, updateMultipleSettings } = useSettingsQuery();
-  const [editedValues, setEditedValues] = useState<Record<string, any>>({});
+  const [editedValues, setEditedValues] = useState<Record<string, SettingValue>>({});
   const [activeTemplate, setActiveTemplate] = useState<EmailTemplate | null>(null);
 
   // ✅ Construire dynamiquement emailTemplates depuis settings
@@ -121,7 +123,7 @@ export default function AdminSettings() {
         let value = editedValues[s.key];
         
         if (s.type === "integer") {
-          value = parseInt(value, 10);
+          value = parseInt(String(value), 10);
         } else if (s.key === 'enable_email_notifications') {
           value = Boolean(value);
         }
@@ -203,7 +205,7 @@ export default function AdminSettings() {
                     </Label>
                     <Input
                       type={setting.key.includes('email') ? 'email' : setting.type === 'integer' ? 'number' : 'text'}
-                      value={editedValues[setting.key] || ''}
+                      value={String(editedValues[setting.key] ?? '')}
                       onChange={(e) => setEditedValues(prev => ({
                         ...prev,
                         [setting.key]: e.target.value
@@ -235,7 +237,7 @@ export default function AdminSettings() {
                       {settingLabels[setting.key] || setting.key}
                     </Label>
                     <Textarea
-                      value={editedValues[setting.key] || ''}
+                      value={String(editedValues[setting.key] ?? '')}
                       onChange={(e) => setEditedValues(prev => ({
                         ...prev,
                         [setting.key]: e.target.value
@@ -361,7 +363,7 @@ export default function AdminSettings() {
               </div>
               <Switch
                 id="enable_email_notifications"
-                checked={editedValues['enable_email_notifications'] || false}
+                checked={Boolean(editedValues['enable_email_notifications'])}
                 onCheckedChange={(checked) => setEditedValues(prev => ({
                   ...prev,
                   enable_email_notifications: checked
@@ -380,7 +382,7 @@ export default function AdminSettings() {
                   <Input
                     type="number"
                     min="1"
-                    value={editedValues[setting.key] || ''}
+                    value={String(editedValues[setting.key] ?? '')}
                     onChange={(e) => setEditedValues(prev => ({
                       ...prev,
                       [setting.key]: e.target.value
@@ -421,10 +423,10 @@ export default function AdminSettings() {
           onClose={() => setActiveTemplate(null)}
           templateKey={activeTemplate.key}
           templateTitle={activeTemplate.title}
-          subjectValue={editedValues[activeTemplate.subjectKey] || 
-            settings.find(s => s.key === activeTemplate.subjectKey)?.value || ''}
-          bodyValue={editedValues[activeTemplate.bodyKey] || 
-            settings.find(s => s.key === activeTemplate.bodyKey)?.value || ''}
+          subjectValue={String(editedValues[activeTemplate.subjectKey] ?? '') || 
+            String(settings.find(s => s.key === activeTemplate.subjectKey)?.value ?? '')}
+          bodyValue={String(editedValues[activeTemplate.bodyKey] ?? '') || 
+            String(settings.find(s => s.key === activeTemplate.bodyKey)?.value ?? '')}
           onSave={handleSaveTemplate(activeTemplate.subjectKey, activeTemplate.bodyKey)}
           variables={activeTemplate.variables}
         />

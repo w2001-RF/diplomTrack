@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DataTable } from '@/components/common/DataTable';
-import { StudentForm } from '@/components/students/StudentForm';
+import { StudentForm, type StudentFormData } from '@/components/students/StudentForm';
 import { ImportStudentsDialog } from '@/components/students/ImportStudentsDialog';
 import { Button } from '@/components/ui/button';
 import { Users, Mail, GraduationCap, Trash2, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAnneeUniversitaires } from '@/data/formations';
-import { useStudentsQuery } from '@/hooks/api/useStudentsQuery';
+import { useStudentsQuery, type StudentImportRow } from '@/hooks/api/useStudentsQuery';
+import type { StudentRow } from '@/lib/api/models';
 import { useFormationsQuery } from '@/hooks/api/useFormationsQuery';
 
 export default function AgentStudents() {
@@ -51,7 +52,7 @@ export default function AgentStudents() {
   };
 
   // Create handler
-  const handleCreate = async (data: any) => {
+  const handleCreate = async (data: StudentFormData) => {
     if (!data.first_name || !data.last_name || !data.formation_id || !data.academic_year) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       throw new Error('Missing required fields');
@@ -81,7 +82,7 @@ export default function AgentStudents() {
   };
 
   // Update handler
-  const handleUpdate = async (student: any, data: any) => {
+  const handleUpdate = async (student: StudentRow, data: StudentFormData) => {
     if (!data.first_name || !data.last_name || !data.formation_id || !data.academic_year) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       throw new Error('Missing required fields');
@@ -96,7 +97,7 @@ export default function AgentStudents() {
       }
     }
 
-    await updateStudent(student.id, {
+    await updateStudent(String(student.id), {
       first_name: data.first_name,
       last_name: data.last_name,
       num_apogee: numApogee,
@@ -116,12 +117,12 @@ export default function AgentStudents() {
   };
 
   // Import handler
-  const handleBulkImport = async (students: any[]) => {
+  const handleBulkImport = async (students: StudentImportRow[]) => {
     try {
       await createManyStudents(students);
       setImportDialogOpen(false);
       await refetch();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Bulk import error:', error);
     }
   };

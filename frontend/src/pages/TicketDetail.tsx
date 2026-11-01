@@ -34,7 +34,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { STATUS_LABELS } from '@/lib/tickets';
 import type { TicketStatus, DocumentType, DocumentRow, DiplomaValidationType } from '@/lib/api/models';
-import { cn } from '@/lib/utils';
+import { cn, errorMessage } from '@/lib/utils';
 import { api } from '@/lib/api';
 
 import { UserRole } from '@/constants/roles';
@@ -68,9 +68,6 @@ const ATTESTATION_WORKFLOW_MILESTONES = [
 const AUTO_VALIDATED_DOCUMENTS: string[] = ['BAC', 'CIN', 'CONTRAT', 'RECU_PAIEMENT', 'ATTESTATION_INSC', 'BAC+2', 'BAC+3'];
 
 const ACCEPTED_FILES = '.pdf,.png,.jpg,.jpeg';
-
-const errorMessage = (error: unknown, fallback: string) =>
-  error instanceof Error && error.message ? error.message : fallback;
 
 /** Open a stored document in a new tab, or save it */
 async function openDocumentFile(doc: DocumentRow, download = false) {
@@ -166,6 +163,25 @@ const getDocStatusLabel = (is_validated: boolean | null) => {
   }
 };
 
+// Helper : ISO <-> date/time
+const pad = (n: number) => String(n).padStart(2, '0');
+
+const isoToDateAndTime = (iso?: string) => {
+  if (!iso) return { date: '', time: '' };
+  const d = new Date(iso);
+  const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`; // HH:mm (24h)
+  return { date, time };
+};
+
+const dateAndTimeToIso = (date: string, time: string) => {
+  if (!date) return '';
+  // create local Date from "YYYY-MM-DD" and "HH:mm"
+  const dt = time ? `${date}T${time}` : `${date}T00:00`;
+  const d = new Date(dt); // interpreted as local
+  return d.toISOString();
+};
+
 export default function TicketDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -187,24 +203,6 @@ export default function TicketDetail() {
   const [milestoneDateOnly, setMilestoneDateOnly] = useState<string>(''); // "YYYY-MM-DD"
   const [milestoneTimeOnly, setMilestoneTimeOnly] = useState<string>(''); // "HH:mm"
 
-  // Helper : ISO <-> date/time
-  const pad = (n: number) => String(n).padStart(2, '0');
-
-  const isoToDateAndTime = (iso?: string) => {
-    if (!iso) return { date: '', time: '' };
-    const d = new Date(iso);
-    const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`; // HH:mm (24h)
-    return { date, time };
-  };
-
-  const dateAndTimeToIso = (date: string, time: string) => {
-    if (!date) return '';
-    // create local Date from "YYYY-MM-DD" and "HH:mm"
-    const dt = time ? `${date}T${time}` : `${date}T00:00`;
-    const d = new Date(dt); // interpreted as local
-    return d.toISOString();
-  };
   const [milestoneComment, setMilestoneComment] = useState('');
 
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);

@@ -246,7 +246,7 @@ export default function CreateAdvancedTicket() {
             
             setChronologies(newChronologies);
         }
-    }, [currentStep, targetMilestone, workflowMilestones]);
+    }, [currentStep, targetMilestone, workflowMilestones, chronologies.length]);
 
     // Effet pour valider les conditions avant de passer à l'étape suivante
     useEffect(() => {

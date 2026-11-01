@@ -5,6 +5,17 @@ import type { StudentRow, StudentInsert, StudentUpdate } from '@/lib/api/models'
 import { toast } from 'sonner';
 import { CACHE_KEYS, defaultCacheConfig } from './useApiCache';
 
+/** A student read from an import spreadsheet (POST /api/students/bulk) */
+export interface StudentImportRow {
+  first_name: string;
+  last_name: string;
+  academic_year: string;
+  formation_type: string;
+  formation_name: string;
+  email?: string;
+  num_apogee?: number;
+}
+
 interface UseStudentsQueryOptions {
   enabled?: boolean;
 }
@@ -55,7 +66,7 @@ export function useStudentsQuery(options: UseStudentsQueryOptions = {}) {
 
   // Mutation for creating multiple students
   const createManyMutation = useMutation({
-    mutationFn: async (students: any[]) => {
+    mutationFn: async (students: StudentImportRow[]) => {
       // Transformer les données pour correspondre au format backend
       const studentsData = students.map(s => ({
         first_name: s.first_name,
@@ -71,7 +82,7 @@ export function useStudentsQuery(options: UseStudentsQueryOptions = {}) {
         success: number;
         failed: number;
         total: number;
-        errors: Array<{ index: number; data: any; error: string }>;
+        errors: Array<{ index: number; data: unknown; error: string }>;
       }>('students/bulk', {
         method: 'POST',
         body: { students: studentsData }

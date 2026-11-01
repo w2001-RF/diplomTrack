@@ -9,16 +9,19 @@ import { useFormationsQuery } from '@/hooks/api/useFormationsQuery';
 
 type FormationTypeCode = 'LUS' | 'MUS' | '';
 
+/** The form's fields, as strings straight from the inputs */
+export interface StudentFormData {
+  first_name: string;
+  last_name: string;
+  num_apogee: string;
+  email: string;
+  formation_id: string;
+  academic_year: string;
+}
+
 interface StudentFormProps {
-  initialData?: {
-    first_name: string;
-    last_name: string;
-    num_apogee: string;
-    email: string;
-    formation_id: string;
-    academic_year: string;
-  };
-  onSubmit: (data: any) => Promise<void>;
+  initialData?: StudentFormData;
+  onSubmit: (data: StudentFormData) => Promise<void>;
   onCancel: () => void;
   isSubmitting: boolean;
   submitLabel?: string;

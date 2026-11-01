@@ -15,12 +15,20 @@ import type { RequestOptions } from './http';
 
 export type CustomRequestOptions = Pick<RequestOptions, 'method' | 'body' | 'headers' | 'queryParams' | 'query'>;
 
+/** One line of an import report */
+export interface ImportResultRow {
+  success: boolean;
+  student_email?: string;
+  reference?: string;
+  error?: string;
+}
+
 export interface ImportResult {
   success: boolean;
   imported: number;
   failed: number;
   total: number;
-  results: unknown[];
+  results: ImportResultRow[];
 }
 
 /**

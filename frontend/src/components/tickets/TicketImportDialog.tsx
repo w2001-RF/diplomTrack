@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, FileSpreadsheet, Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useTicketsQuery } from '@/hooks/api/useTicketsQuery';
+import type { ImportResult } from '@/lib/api';
 
 interface TicketImportDialogProps {
   isOpen: boolean;
@@ -31,11 +32,14 @@ interface ParsedTicket {
   }>;
 }
 
+/** One spreadsheet row, keyed by column header */
+type SheetRow = Record<string, string | number | boolean | undefined>;
+
 export function TicketImportDialog({ isOpen, onClose }: TicketImportDialogProps) {
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<ParsedTicket[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [importResult, setImportResult] = useState<any>(null);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const { importTickets, isImporting } = useTicketsQuery();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,19 +54,21 @@ export function TicketImportDialog({ isOpen, onClose }: TicketImportDialogProps)
       const data = await selectedFile.arrayBuffer();
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      const jsonData = XLSX.utils.sheet_to_json<SheetRow>(worksheet);
 
       // Transform Excel data to API format
-      const tickets: ParsedTicket[] = jsonData.map((row: any) => ({
+      // First non-empty cell among the accepted column names
+      const cell = (row: SheetRow, ...names: string[]) => String(names.map((n) => row[n]).find((v) => v) ?? '');
+      const tickets: ParsedTicket[] = jsonData.map((row) => ({
         student: {
-          first_name: row['Prénom'] || row['first_name'] || '',
-          last_name: row['Nom'] || row['last_name'] || '',
-          email: row['Email'] || row['email'] || '',
-          num_apogee: String(row['Num Apogee'] || row['num_apogee'] || ''),
-          academic_year: row['Année Académique'] || row['academic_year'] || '',
-          formation_id: parseInt(row['Formation ID'] || row['formation_id'] || '1')
+          first_name: cell(row, 'Prénom', 'first_name'),
+          last_name: cell(row, 'Nom', 'last_name'),
+          email: cell(row, 'Email', 'email'),
+          num_apogee: cell(row, 'Num Apogee', 'num_apogee'),
+          academic_year: cell(row, 'Année Académique', 'academic_year'),
+          formation_id: parseInt(String(row['Formation ID'] || row['formation_id'] || '1'), 10)
         },
-        initial_milestone_code: row['Milestone'] || row['initial_milestone_code'] || 'CREATED',
+        initial_milestone_code: cell(row, 'Milestone', 'initial_milestone_code') || 'CREATED',
         documents: parseDocuments(row)
       }));
 
@@ -75,7 +81,7 @@ export function TicketImportDialog({ isOpen, onClose }: TicketImportDialogProps)
     }
   };
 
-  const parseDocuments = (row: any) => {
+  const parseDocuments = (row: SheetRow) => {
     const docs = [];
     const docTypes = ['CNI', 'RELEVE_NOTES', 'DIPLOME_BAC', 'PHOTO', 'ACTE_NAISSANCE'];
     
@@ -251,7 +257,7 @@ export function TicketImportDialog({ isOpen, onClose }: TicketImportDialogProps)
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {importResult.results.map((result: any, idx: number) => (
+                      {importResult.results.map((result, idx) => (
                         <tr key={idx}>
                           <td className="p-2">
                             {result.success ? (

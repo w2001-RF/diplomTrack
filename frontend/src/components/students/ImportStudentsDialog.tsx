@@ -10,6 +10,7 @@ import { Upload, FileSpreadsheet, Loader2, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { getAnneeUniversitaires } from '@/data/formations';
 import { useFormationsQuery } from '@/hooks/api/useFormationsQuery';
+import type { StudentImportRow } from '@/hooks/api/useStudentsQuery';
 
 interface PreviewStudent {
   first_name: string;
@@ -25,7 +26,7 @@ interface PreviewStudent {
 interface ImportStudentsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onImport: (students: any[]) => Promise<void>;
+  onImport: (students: StudentImportRow[]) => Promise<void>;
   isImporting: boolean;
 }
 

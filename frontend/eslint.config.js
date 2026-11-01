@@ -24,8 +24,9 @@ export default tseslint.config(
     },
   },
   {
-    // Fast Refresh does not apply to test helpers
-    files: ["src/test/**", "**/*.test.{ts,tsx}"],
+    // Fast Refresh does not apply to test helpers; shadcn/ui files export
+    // their variant helpers (buttonVariants...) next to the components
+    files: ["src/test/**", "**/*.test.{ts,tsx}", "src/components/ui/**"],
     rules: { "react-refresh/only-export-components": "off" },
   },
 );

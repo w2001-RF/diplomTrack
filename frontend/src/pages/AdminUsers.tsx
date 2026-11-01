@@ -19,6 +19,7 @@ import { BulkAgentPasswordsDialog, type CreatedAgentCredential } from "@/compone
 
 //api
 import { api } from '@/lib/api';
+import { errorMessage } from '@/lib/utils';
 import type { AppRole, ProfileRow as Profile, UserRoleRow } from '@/lib/api/models';
 
 //hooks
@@ -123,9 +124,9 @@ export default function AdminUsers() {
       setBulkDialogOpen(false);
       await refreshData();
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Bulk create agents error:', error);
-      toast.error(error.message || 'Erreur lors de la création');
+      toast.error(errorMessage(error, 'Erreur lors de la création'));
     } finally {
       setCreatingBulk(false);
     }
@@ -148,9 +149,9 @@ export default function AdminUsers() {
       toast.success(`Rôle de ${selectedUser.full_name || selectedUser.email} mis à jour en ${roleLabels[newRole]}`);
       setDialogOpen(false);
       await refreshData();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating role:', error);
-      toast.error(error.message || 'Erreur lors de la mise à jour du rôle');
+      toast.error(errorMessage(error, 'Erreur lors de la mise à jour du rôle'));
     } finally {
       setUpdatingUserId(null);
     }
@@ -163,9 +164,9 @@ export default function AdminUsers() {
       
       toast.success(`Utilisateur ${user.full_name || user.email} supprimé`);
       await refreshData();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting user:', error);
-      toast.error(error.message || 'Erreur lors de la suppression');
+      toast.error(errorMessage(error, 'Erreur lors de la suppression'));
     } finally {
       setDeletingUserId(null);
     }
