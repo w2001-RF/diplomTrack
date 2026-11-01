@@ -57,7 +57,8 @@ def seeded(seeded_database, tmp_path):
 
     database = tmp_path / "test.db"
     shutil.copy(seeded_database, database)
-    app = build_app(upload_folder=str(tmp_path / "profiles"), database_uri=f"sqlite:///{database.as_posix()}")
+    app = build_app(upload_folder=str(tmp_path / "profiles"), database_uri=f"sqlite:///{database.as_posix()}",
+                    document_folder=str(tmp_path / "documents"))
     with app.app_context():
         yield Api(app.test_client())
         db.session.remove()

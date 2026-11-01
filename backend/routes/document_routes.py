@@ -5,6 +5,8 @@ from utils.permissions import require_roles
 from schemas.document_schema import DocumentSchema
 from services.document_service import DocumentService
 from werkzeug.exceptions import HTTPException
+from utils import document_storage
+from utils.constants import DocumentType
 
 document_bp = Blueprint("documents", __name__, url_prefix="/api/documents")
 
@@ -81,9 +83,10 @@ def get_document(document_id):
 @require_roles("AGENT", "ADMIN")
 def upload_document():
     """
-    Upload a document to a ticket
-    
-    Body:
+    Upload a document to a ticket, replacing any previous one of the same type
+
+    multipart/form-data: ticket_id, document_type, file (pdf, png, jpg, jpeg)
+    or JSON, to record a file stored elsewhere:
     {
         "ticket_id": 1,
         "document_type": "BAC",
@@ -91,36 +94,39 @@ def upload_document():
     }
     """
     try:
-        payload = request.json
-        
+        from models.document import Document
+        from models.ticket import Ticket
+
+        multipart = request.mimetype == "multipart/form-data"
+        payload = request.form if multipart else (request.get_json(silent=True) or {})
+        upload = request.files.get("file") if multipart else None
+
         # Validation
         if not payload.get("ticket_id"):
             return {"message": "ticket_id is required"}, 400
         if not payload.get("document_type"):
             return {"message": "document_type is required"}, 400
-        if not payload.get("file_path"):
+        if payload["document_type"] not in DocumentType.all():
+            return {"message": f"Unknown document_type: {payload['document_type']}"}, 400
+        if multipart and (not upload or not upload.filename):
+            return {"message": "file is required"}, 400
+        if not multipart and not payload.get("file_path"):
             return {"message": "file_path is required"}, 400
-        
-        # ✅ Check permissions for STUDENT
-        jwt_data = get_jwt()
-        role = jwt_data.get("role")
-        
-        if role == "STUDENT":
-            from models.student import Student
-            from models.ticket import Ticket
-            
-            user_id = AuthService.get_current_user().id
-            student = Student.query.filter_by(user_id=user_id).first()
-            ticket = Ticket.query.get_or_404(payload["ticket_id"])
-            
-            if not student or ticket.student_id != student.id:
-                return {"message": "Access denied. You can only upload documents to your own ticket"}, 403
+
+        ticket = Ticket.query.get_or_404(int(payload["ticket_id"]))
+        previous = Document.query.filter_by(ticket_id=ticket.id, document_type=payload["document_type"]).first()
+        previous_path = previous.file_path if previous else None
+
+        file_path = (document_storage.save(upload, ticket.id, payload["document_type"])
+                     if upload else payload["file_path"])
 
         document = DocumentService.upload_document(
-            ticket_id=payload["ticket_id"],
+            ticket_id=ticket.id,
             document_type=payload["document_type"],
-            file_path=payload["file_path"]
+            file_path=file_path
         )
+        if previous_path and previous_path != file_path:
+            document_storage.remove(previous_path)
 
         return document_schema.dump(document), 201
 
@@ -130,7 +136,24 @@ def upload_document():
         raise
     except Exception as e:
         return {"message": f"Error uploading document: {str(e)}"}, 500
-    
+
+
+@document_bp.route("/<int:document_id>/file", methods=["GET"])
+@jwt_required()
+@require_roles("AGENT", "ADMIN", "STUDENT")
+def download_document_file(document_id):
+    """The stored file of a document; a student only gets files of their own ticket"""
+    from models.document import Document
+    from models.student import Student
+
+    document = Document.query.get_or_404(document_id)
+    if get_jwt().get("role") == "STUDENT":
+        student = Student.query.filter_by(user_id=AuthService.get_current_user().id).first()
+        if not student or document.ticket.student_id != student.id:
+            return {"message": "Access denied"}, 403
+
+    return document_storage.send(document.file_path)
+
 
 @document_bp.route("/<int:document_id>/validate", methods=["PATCH"])
 @jwt_required()
@@ -219,8 +242,10 @@ def delete_document(document_id):
         document = Document.query.get_or_404(document_id)
         
         from extensions import db
+        file_path = document.file_path
         db.session.delete(document)
         db.session.commit()
+        document_storage.remove(file_path)
         
         return {
             "message": "Document deleted successfully",

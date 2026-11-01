@@ -71,6 +71,7 @@ class Config:
     # Files Settings
     # ---------------------------
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads/profiles')
+    DOCUMENT_UPLOAD_FOLDER = os.getenv('DOCUMENT_UPLOAD_FOLDER', 'uploads/documents')
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10MB max
 
     # ---------------------------

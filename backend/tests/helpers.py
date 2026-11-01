@@ -25,7 +25,7 @@ def password_hash():
     return _password_hash
 
 
-def build_app(upload_folder=None, database_uri="sqlite:///:memory:"):
+def build_app(upload_folder=None, database_uri="sqlite:///:memory:", document_folder=None):
     app = Flask(__name__)
     app.config.update(
         TESTING=True,  # Flask-Mail does not send
@@ -35,6 +35,7 @@ def build_app(upload_folder=None, database_uri="sqlite:///:memory:"):
         FRONTEND_URL="http://localhost",
         USE_MINIO=False,
         UPLOAD_FOLDER=upload_folder or "uploads/profiles",
+        DOCUMENT_UPLOAD_FOLDER=document_folder or "uploads/documents",
     )
     db.init_app(app)
     jwt.init_app(app)
