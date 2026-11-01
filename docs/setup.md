@@ -57,11 +57,12 @@ Other scripts: `npm run build`, `npm run lint`, `npm run typecheck`. The project
 ### Tests
 
 ```sh
-cd backend
-pytest
+cd backend && pytest          # backend
+cd frontend && npm test       # frontend unit + integration (Vitest)
+python frontend/qa/run_qa.py  # end-to-end QA (Robot Framework, needs a browser)
 ```
 
-Only `tests/test_auth_routes.py` exists at the moment.
+See [testing.md](testing.md) for what each layer covers and how to write tests.
 
 ## Default account
 

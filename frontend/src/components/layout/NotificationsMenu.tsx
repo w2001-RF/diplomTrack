@@ -83,7 +83,7 @@ export function NotificationsMenu() {
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
           <Bell size={20} />
           {unreadCount > 0 && (
             <>

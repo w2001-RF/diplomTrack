@@ -1,0 +1,5 @@
+# Robot Framework QA suite (see qa/README.md). Install into the backend's
+# virtualenv or a separate one: pip install -r frontend/qa/requirements.txt
+robotframework==7.5
+robotframework-seleniumlibrary==6.9.0
+robotframework-requests==0.9.7

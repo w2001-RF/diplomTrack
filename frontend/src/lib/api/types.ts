@@ -1,5 +1,7 @@
 // Generic API Response types
 
+import type { UserRole } from '@/constants/roles';
+
 export interface ApiResponse<T> {
   data: T | null;
   error: ApiError | null;
@@ -43,7 +45,8 @@ export interface AuthUser {
   id: string;
   email: string;
   username?: string;
-  role?: 'student' | 'agent' | 'admin';
+  /** Uppercase, as the backend sends it (STUDENT | AGENT | ADMIN) */
+  role?: UserRole;
   is_active?: boolean;
   must_reset_password?: boolean;
   profile_image?: string | null;

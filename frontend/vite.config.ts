@@ -12,6 +12,8 @@ export default defineConfig(({ mode }) => {
     server: {
       host: "::",
       port: 8080,
+      // Robot Framework writes reports into qa/results; don't reload the page for them
+      watch: { ignored: ["**/qa/**"] },
       proxy: {
         "/api": { target: apiTarget, changeOrigin: true },
       },
