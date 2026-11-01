@@ -1,0 +1,160 @@
+# Test pipeline for test-driven development (see docs/testing.md#continuous-integration).
+#
+# Every push to any branch and every pull request runs the tests, so a failing
+# test pushed first (red) and the fix pushed after (green) both get a verdict.
+# The fast suites run in parallel and report failures inline on the diff; the
+# slower end-to-end suite only runs once they pass.
+
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# A newer push on the same branch makes the running pipeline obsolete
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.13"
+  NODE_VERSION: "22"
+
+jobs:
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        # The plugin turns failures into annotations on the changed lines
+        run: pip install -r requirements.txt pytest-github-actions-annotate-failures
+
+      - name: Run tests
+        run: pytest -ra --junitxml=test-results/pytest.xml
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: backend/test-results/
+
+  frontend:
+    name: Frontend (Vitest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit and integration tests
+        # github-actions annotates failures; junit keeps a machine-readable copy
+        run: >
+          npm run test:coverage --
+          --reporter=default --reporter=github-actions --reporter=junit
+          --outputFile.junit=test-results/vitest.xml
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-test-results
+          path: |
+            frontend/test-results/
+            frontend/coverage/
+
+  static-checks:
+    name: Lint and typecheck (report only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Both have known errors from before the test suites (docs/known-issues.md).
+    # They are reported but do not fail the pipeline until that debt is paid.
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        if: always()
+        run: npm run typecheck
+
+  e2e:
+    name: End-to-end QA (Robot Framework)
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            frontend/qa/requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt -r frontend/qa/requirements.txt
+          npm ci --prefix frontend
+
+      - name: Run QA suite
+        # ubuntu-latest ships Chrome; run_qa.py starts its own Flask API and Vite server
+        run: python frontend/qa/run_qa.py --browser chrome
+
+      - name: Upload Robot reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-reports
+          path: frontend/qa/results/
