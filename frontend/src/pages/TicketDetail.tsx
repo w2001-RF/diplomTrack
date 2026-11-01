@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useTicketQuery } from '@/hooks/api/useTicketsQuery';
-import { useDocumentsQuery } from '@/hooks/api/useDocumentsQuery';
+import { useDocumentsQuery, fetchDocumentFile } from '@/hooks/api/useDocumentsQuery';
 import { useMilestonesQuery, useMilestoneHistoryQuery } from '@/hooks/api/useMilestonesQuery';
 import { useApiCache, CACHE_KEYS } from '@/hooks/api/useApiCache';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -27,39 +27,24 @@ import {
   ArrowRight,
   User
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import type { TicketStatus, DocumentType, DocumentStatus } from '@/lib/api/models';
+import { STATUS_LABELS } from '@/lib/tickets';
+import type { TicketStatus, DocumentType, DocumentRow, DiplomaValidationType } from '@/lib/api/models';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 
 import { UserRole } from '@/constants/roles';
 
-const statusLabels: Record<TicketStatus, string> = {
-  CREATED: 'Créé',
-  ATTENTE_CORRECTION_DOCS: 'En attente de correction',
-  DOCS_CORRIGES_SOUMIS: 'Documents corrigés soumis',
-  ATTENTE_DIPLOME: 'En attente du diplôme',
-  DIPLOME_DEPOSE: 'Diplôme déposé',
-  DIPLOME_ENVOYE_CENTRE: 'Diplôme envoyé au centre',
-  VALIDATION_CENTRE_RECUE: 'Validation du centre reçue',
-  DOSSIER_EN_COURS: 'Dossier en cours',
-  PIECES_COMPLETES: 'Pièces complètes',
-  EN_ATTENTE_REPONSE: 'En attente de réponse',
-  REPONSE_RECUE: 'Réponse reçue',
-  DOSSIER_CLOTURE: 'Dossier clôturé',
-  BLOQUE_PIECE_MANQUANTE: 'Bloqué - pièce manquante',
-  REJETE: 'Rejeté',
-  ARCHIVE: 'Archivé'
-};
+const statusLabels = STATUS_LABELS;
 
 const documentTypeLabels: Record<DocumentType, string> = {
   BAC: 'Baccalauréat',
-  BAC_PLUS_2: 'BAC+2',
-  BAC_PLUS_3: 'BAC+3',
+  'BAC+2': 'BAC+2',
+  'BAC+3': 'BAC+3',
   CIN: 'Carte d\'identité nationale',
   CONTRAT: 'Contrat',
   RECU_PAIEMENT: 'Reçu de paiement',
@@ -80,9 +65,30 @@ const ATTESTATION_WORKFLOW_MILESTONES = [
   'VALIDATION_CENTRE_RECUE'
 ];
 
-const AUTO_VALIDATED_DOCUMENTS = ['BAC', 'CIN', 'CONTRAT', 'RECU_PAIEMENT', 'ATTESTATION_INSC', 'BAC_PLUS_2', 'BAC_PLUS_3'];
+const AUTO_VALIDATED_DOCUMENTS: string[] = ['BAC', 'CIN', 'CONTRAT', 'RECU_PAIEMENT', 'ATTESTATION_INSC', 'BAC+2', 'BAC+3'];
 
-type DiplomaValidationType = 'DIPLOMA' | 'ATTESTATION';
+const ACCEPTED_FILES = '.pdf,.png,.jpg,.jpeg';
+
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error && error.message ? error.message : fallback;
+
+/** Open a stored document in a new tab, or save it */
+async function openDocumentFile(doc: DocumentRow, download = false) {
+  try {
+    const url = URL.createObjectURL(await fetchDocumentFile(doc.id));
+    if (download) {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.file_path || `${doc.document_type}`;
+      link.click();
+    } else {
+      window.open(url, '_blank', 'noopener');
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (error) {
+    toast.error(errorMessage(error, 'Fichier introuvable'));
+  }
+}
 
 const getStatusColor = (status: TicketStatus) => {
   switch (status) {
@@ -169,8 +175,8 @@ export default function TicketDetail() {
   
   // Use React Query hooks
   const { data: ticketData, isLoading: isTicketLoading, error: ticketError } = useTicketQuery(id);
-  const { documents: documentsList, loading: isDocumentsLoading, isRefetching, refetch, uploadDocument, validateDocument, inValidateDocument, isUploading: isDocumentUploading, isValidating: isDocumentValidating, isInValidating: isDocumentInValidating } = useDocumentsQuery({ ticketId: id });
-  const { chronologies: chronologiesList, loading: isChronologiesLoading, getMilestoneByCode } = useMilestonesQuery();
+  const { documents: documentsList, loading: isDocumentsLoading, uploadDocument, validateDocument, inValidateDocument, isUploading: isDocumentUploading, isValidating: isDocumentValidating, isInValidating: isDocumentInValidating } = useDocumentsQuery({ ticketId: id });
+  const { loading: isMilestonesLoading, getMilestoneByCode } = useMilestonesQuery();
   const { data: milestoneHistory = [], isLoading: isMilestoneHistoryLoading } = useMilestoneHistoryQuery(id);
 
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -201,10 +207,9 @@ export default function TicketDetail() {
   };
   const [milestoneComment, setMilestoneComment] = useState('');
 
-  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [changingMilestone, setChangingMilestone] = useState(false);
-  const [milestoneNotes, setMilestoneNotes] = useState('');
-  
+
   const [uploadForm, setUploadForm] = useState({
     type: '' as DocumentType | '',
     file: null as File | null
@@ -217,7 +222,7 @@ export default function TicketDetail() {
   
   const ticket = ticketData;
   const student = ticket?.student;
-  const documents = documentsList.sort((a, b) => a.id - b.id) || [];
+  const documents = [...documentsList].sort((a, b) => a.id - b.id);
   const currentMilestone = getCurrentMilestone();
   const currentMilestoneOrder = currentMilestone?.order || 0;
 
@@ -228,10 +233,11 @@ export default function TicketDetail() {
     AUTO_VALIDATED_DOCUMENTS.includes(doc.document_type) && doc.is_validated === false
   );
 
-  const [diplomaValidationType, setDiplomaValidationType] = useState<DiplomaValidationType>(
-    ticket?.diploma_validation_type
-  );
-  console.log(diplomaValidationType);
+  const [diplomaValidationType, setDiplomaValidationType] = useState<DiplomaValidationType>('DIPLOMA');
+  // The ticket loads after the first render; follow it once it arrives or changes
+  useEffect(() => {
+    if (ticket?.diploma_validation_type) setDiplomaValidationType(ticket.diploma_validation_type);
+  }, [ticket?.diploma_validation_type]);
 
   const chronologies = (ticket?.chronologies || []).filter(chrono => {
     const milestoneCode = chrono.milestone.code;
@@ -255,10 +261,6 @@ export default function TicketDetail() {
   const isStudent = role === UserRole.STUDENT;
   const canValidate = role === UserRole.AGENT;
 
-  const formationType = student?.formation?.formation_type?.code;
-  const diplomaDocType = formationType === 'MUS' ? 'BAC_PLUS_3' : 'BAC_PLUS_2';
-  const diplomaDoc = documents.find(d => d.document_type === diplomaDocType);
-  
   useEffect(() => {
     if (milestoneChangeDate) {
       const { date, time } = isoToDateAndTime(milestoneChangeDate);
@@ -271,7 +273,7 @@ export default function TicketDetail() {
   }, [milestoneChangeDate]);
 
   // État de chargement global
-  const isLoading = isTicketLoading || isMilestoneHistoryLoading || isDocumentsLoading || isChronologiesLoading;
+  const isLoading = isTicketLoading || isMilestoneHistoryLoading || isDocumentsLoading || isMilestonesLoading;
 
   // État de chargement spécifique pour les actions
   const isAnyActionPending = isDocumentUploading || isDocumentValidating || isDocumentInValidating || changingMilestone;
@@ -290,15 +292,10 @@ export default function TicketDetail() {
     if (!uploadForm.type || !uploadForm.file || !ticket) return;
 
     try {
-      await uploadDocument({
-        ticket_id: ticket.id,
-        type: uploadForm.type,
-        file_name: uploadForm.file.name,
-        file_url: `placeholder://${uploadForm.file.name}`
-      });
+      await uploadDocument({ ticketId: ticket.id, documentType: uploadForm.type, file: uploadForm.file });
       setUploadDialogOpen(false);
       setUploadForm({ type: '', file: null });
-    } catch (error) {
+    } catch {
       // Error handled by mutation
     }
   };
@@ -311,7 +308,7 @@ export default function TicketDetail() {
       setValidateDialogOpen(false);
       setSelectedDocId(null);
       setComment('');
-    } catch (error) {
+    } catch {
       // Error handled by mutation
     }
   };
@@ -321,7 +318,6 @@ export default function TicketDetail() {
 
     try {
       const selectedDoc = documents.find(d => d.id === selectedDocId);
-      const AUTO_VALIDATED_DOCUMENTS = ['BAC', 'CIN', 'CONTRAT', 'RECU_PAIEMENT', 'ATTESTATION_INSC', 'BAC_PLUS_2', 'BAC_PLUS_3'];
       const isAutoValidatedDoc = selectedDoc && AUTO_VALIDATED_DOCUMENTS.includes(selectedDoc.document_type);
       
       await inValidateDocument(selectedDocId, comment);
@@ -344,8 +340,8 @@ export default function TicketDetail() {
       invalidateCache('TICKETS');
       invalidateCache([CACHE_KEYS.MILESTONES, 'history', id]);
       
-    } catch (error: any) {
-      toast.error(error.message || 'Erreur lors de l\'invalidation');
+    } catch (error) {
+      toast.error(errorMessage(error, 'Erreur lors de l\'invalidation'));
     }
   };
 
@@ -356,18 +352,17 @@ export default function TicketDetail() {
     try {
       const toMilestone = getMilestoneByCode(newMilestone);
 
-      const { data, error } = await api.data.customRequest<{data: any, error: any}>(
+      const { error } = await api.data.customRequest(
         `tickets/${ticket.id}/transition`,
         {
           method: 'PATCH',
-          body: { 
-            next_state: toMilestone.code,
+          body: {
+            next_state: toMilestone?.code ?? newMilestone,
             changed_at: milestoneChangeDate || undefined,
             comment: milestoneComment || undefined
           }
         }
       );
-      console.log(data, error);
       if (error) throw new Error(error.message);
 
       // Si on arrive à VALIDATION_CENTRE_RECUE, changer automatiquement en DIPLOMA
@@ -378,7 +373,7 @@ export default function TicketDetail() {
             'Validation du centre reçue. Le type de validation a été changé en Diplôme.',
             { duration: 5000 }
           );
-        } catch (err: any) {
+        } catch {
           toast.warning('Milestone mis à jour mais erreur lors du changement de type de validation');
         }
       } else {
@@ -389,13 +384,12 @@ export default function TicketDetail() {
       setMilestoneDateOnly('');
       setMilestoneTimeOnly('');
       setMilestoneComment('');
-      setMilestoneNotes('');
       
       // Invalidate caches to refetch
       invalidateCache('TICKETS');
       invalidateCache([CACHE_KEYS.MILESTONES, 'history', id]);
-    } catch (error: any) {
-      toast.error(error.message || 'Erreur lors de la mise à jour');
+    } catch (error) {
+      toast.error(errorMessage(error, 'Erreur lors de la mise à jour'));
     } finally {
       setChangingMilestone(false);
     }
@@ -407,8 +401,8 @@ export default function TicketDetail() {
     setIsUpdatingDiplomaType(true);
     try {
       const { data, error } = await api.data.customRequest<{
-        message: string; 
-        ticket: any; 
+        message: string;
+        ticket: { current_milestone?: { code?: string } | null };
       }>(
         `tickets/${ticket.id}/diploma-validation-type`,
         {
@@ -423,7 +417,7 @@ export default function TicketDetail() {
     
       //Transition automatique vers DOSSIER_EN_COURS si DIPLOMA
       if (newType === 'DIPLOMA') {
-        const currentMilestoneCode = data?.ticket?.current_milestone?.code;
+        const currentMilestoneCode = data?.ticket?.current_milestone?.code ?? '';
         const ATTESTATION_MILESTONES = ['ATTENTE_DIPLOME', 'DIPLOME_DEPOSE', 'DIPLOME_ENVOYE_CENTRE', 'VALIDATION_CENTRE_RECUE'];
         
         // Si on est dans un milestone ATTESTATION, retourner à CREATED
@@ -434,7 +428,7 @@ export default function TicketDetail() {
               'Type de validation changé en Diplôme. Le dossier a été réinitialisé.',
               { duration: 5000 }
             );
-          } catch (err: any) {
+          } catch {
             toast.error('Erreur lors de la réinitialisation du dossier');
           }
         } else {
@@ -446,21 +440,21 @@ export default function TicketDetail() {
           { duration: 5000 }
         );
       } else {
-        toast.success(`Type de validation changé en ${newType === 'DIPLOMA' ? 'Diplôme' : 'Attestation'}`);
+        toast.success('Type de validation changé en Attestation');
       }
       
       
       // Invalidate cache
       invalidateCache('TICKETS');
       invalidateCache([CACHE_KEYS.MILESTONES, 'history', id]);
-    } catch (error: any) {
-      toast.error(error.message || 'Erreur lors de la mise à jour');
+    } catch (error) {
+      toast.error(errorMessage(error, 'Erreur lors de la mise à jour'));
     } finally {
       setIsUpdatingDiplomaType(false);
     }
   };
 
-  if (ticketError || !ticket || !student) {
+  if (ticketError || !ticket || !student || !currentMilestone) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center h-64">
@@ -486,7 +480,7 @@ export default function TicketDetail() {
               <h1 className="text-2xl font-bold text-foreground">{ticket.reference}</h1>
               <Badge className={`${getStatusColor(currentMilestone.code)} text-primary-foreground`}>
                 {getStatusIcon(currentMilestone.code)}
-                <span className="ml-1">{statusLabels[currentMilestone.label]}</span>
+                <span className="ml-1">{currentMilestone.label || statusLabels[currentMilestone.code]}</span>
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
@@ -560,7 +554,7 @@ export default function TicketDetail() {
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(statusLabels)
-                  .filter(([value, label]) => {
+                  .filter(([value]) => {
                     // ✅ Filtrer les milestones de correction
                     if (CORRECTION_WORKFLOW_MILESTONES.includes(value)) {
                       const isInCorrectionWorkflow = currentMilestone && CORRECTION_WORKFLOW_MILESTONES.includes(currentMilestone.code);
@@ -684,14 +678,9 @@ export default function TicketDetail() {
                           </div>
                           <div>
                             <p className="font-medium">
-                              {doc.document_type === 'BAC+2' 
-                                ? documentTypeLabels['BAC_PLUS_2']
-                                : doc.document_type === 'BAC+3'
-                                ? documentTypeLabels['BAC_PLUS_3']
-                                : documentTypeLabels[doc.document_type]
-                              }
+                              {documentTypeLabels[doc.document_type] ?? doc.document_type}
                             </p>
-                            <p className="text-xs text-muted-foreground">{doc.file_path}</p>
+                            <p className="text-xs text-muted-foreground">{doc.file_path || 'Aucun fichier'}</p>
                           </div>
                         </div>
 
@@ -700,18 +689,30 @@ export default function TicketDetail() {
                             {getDocStatusLabel(doc.is_validated)}
                           </Badge>
 
-                          {doc.file_path && (
-                            <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              {doc.is_validated && (
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <div className="flex items-center gap-1">
+                            {doc.file_path && (
+                              <>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Voir ${doc.document_type}`}
+                                  onClick={() => openDocumentFile(doc)}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Télécharger ${doc.document_type}`}
+                                  onClick={() => openDocumentFile(doc, true)}>
                                   <Download className="h-4 w-4" />
                                 </Button>
-                              )}
-                            </div>
-                          )}
+                              </>
+                            )}
+                            {canValidate && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Téléverser ${doc.document_type}`}
+                                onClick={() => {
+                                  setUploadForm({ type: doc.document_type, file: null });
+                                  setUploadDialogOpen(true);
+                                }}
+                                disabled={isDocumentUploading}>
+                                <Upload className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
 
                           {/* ✅ Switch pour diplôme validé */}
                           {canValidate && (doc.document_type === 'BAC+2' || doc.document_type === 'BAC+3') && doc.is_validated === true && (
@@ -777,6 +778,44 @@ export default function TicketDetail() {
                     ))}
                   </div>
                 )}
+
+                {/* Upload dialog */}
+                <Dialog
+                  open={uploadDialogOpen}
+                  onOpenChange={(open) => {
+                    setUploadDialogOpen(open);
+                    if (!open) setUploadForm({ type: '', file: null });
+                  }}
+                >
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Téléverser un document</DialogTitle>
+                      <DialogDescription>
+                        {uploadForm.type ? documentTypeLabels[uploadForm.type] : ''} : PDF, PNG ou JPG, 10 Mo maximum.
+                        Un fichier existant est remplacé et devra être validé à nouveau.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="document-file">Fichier</Label>
+                        <Input
+                          id="document-file"
+                          type="file"
+                          accept={ACCEPTED_FILES}
+                          onChange={(e) => setUploadForm((form) => ({ ...form, file: e.target.files?.[0] ?? null }))}
+                        />
+                      </div>
+                      <Button
+                        onClick={handleUploadDocument}
+                        className="w-full"
+                        disabled={!uploadForm.file || isDocumentUploading}
+                      >
+                        {isDocumentUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Téléverser
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
 
                 {/* ✅ Dialog de validation */}
                 <Dialog open={validateDialogOpen} onOpenChange={setValidateDialogOpen}>
@@ -852,7 +891,7 @@ export default function TicketDetail() {
                       </Button>
                       <Button 
                         onClick={() => {
-                          setInvalidateDialogOpen(false);
+                          setInValidateDialogOpen(false);
                           setSelectedDocId(null);
                           setComment('');
                         }}
@@ -890,8 +929,8 @@ export default function TicketDetail() {
                           
                           toast.success('Documents corrigés soumis avec succès');
                           invalidateCache('TICKETS');
-                        } catch (error: any) {
-                          toast.error(error.message || 'Erreur lors de la soumission');
+                        } catch (error) {
+                          toast.error(errorMessage(error, 'Erreur lors de la soumission'));
                         }
                       }}
                     >
@@ -930,8 +969,8 @@ export default function TicketDetail() {
                       const isCompleted = milestone.order < currentMilestoneOrder;
                       const isCurrent = milestone.order === currentMilestoneOrder;
                       const isPending = milestone.order > currentMilestoneOrder;
-                      const isBlocked = ticket.status === 'BLOQUE_PIECE_MANQUANTE';
-                      const isisMilestoneHistoryLoading = ticket.status === 'REJETE';
+                      const isBlocked = currentMilestone.code === 'BLOQUE_PIECE_MANQUANTE';
+                      const isisMilestoneHistoryLoading = currentMilestone.code === 'REJETE';
 
                       return (
                         <div

@@ -240,7 +240,7 @@ describe('useStudentsQuery mutations', () => {
     const { result } = renderHook(() => useStudentsQuery(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    await act(() => result.current.createStudent({ first_name: 'A', last_name: 'B', num_apogee: '1', email: 'a@b.ma', academic_year: '2025-2026' }));
+    await act(() => result.current.createStudent({ first_name: 'A', last_name: 'B', num_apogee: 1, email: 'a@b.ma', academic_year: '2025-2026' }));
     await act(() => result.current.updateStudent('1', { last_name: 'C' }));
     await act(() => result.current.deleteStudent('1'));
     await act(() => result.current.createManyStudents([{ first_name: 'D', last_name: 'E', academic_year: '2025-2026' } as never]));

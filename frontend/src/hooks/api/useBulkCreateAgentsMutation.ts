@@ -22,14 +22,12 @@ type BulkAgentResponse = {
 export function useBulkCreateAgentsMutation() {
   return useMutation({
     mutationFn: async (payload: BulkAgentInput): Promise<BulkAgentResponse> => {
-      // IMPORTANT: table path must match your REST adapter pattern:
-      // api.data.create(table, data) -> POST /api/{table}
-      // Your endpoint is POST /api/admin/users/agents/bulk
-      // So we use query() to hit a custom endpoint:
-
-      const res = await api.data.createMany<BulkAgentResponse>('admin/users/agents', payload);
-      if(res.error) {
-        throw new Error(res.error.message || 'Erreur lors de la création en masse');
+      const res = await api.data.customRequest<BulkAgentResponse>('admin/users/agents/bulk', {
+        method: 'POST',
+        body: payload,
+      });
+      if (res.error || !res.data) {
+        throw new Error(res.error?.message || 'Erreur lors de la création en masse');
       }
       return res.data;
     },

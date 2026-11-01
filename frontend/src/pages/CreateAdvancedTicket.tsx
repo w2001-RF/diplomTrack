@@ -11,7 +11,6 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useStudentsQuery, useMilestonesQuery, useTicketsQuery } from '@/hooks/api';
 import { useFormationsQuery } from '@/hooks/api/useFormationsQuery';
 import { useAuth } from '@/hooks/useAuth';
-import { StudentRow } from '@/types/database';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -176,7 +175,7 @@ export default function CreateAdvancedTicket() {
           const matchesSearch = 
             student.last_name.toLowerCase().includes(q) ||
             student.first_name.toLowerCase().includes(q) ||
-            student.num_apogee?.toLowerCase().includes(q);
+            String(student.num_apogee ?? '').includes(q);
     
           if (!matchesSearch) return false;
     

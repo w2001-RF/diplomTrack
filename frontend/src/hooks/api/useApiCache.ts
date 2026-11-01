@@ -11,6 +11,7 @@ export const CACHE_KEYS = {
   NOTIFICATIONS: 'notifications',
   SETTINGS: 'settings',
   USER_ROLES: 'user_roles',
+  USERS: 'users',
 } as const;
 
 // Default stale time: 5 minutes

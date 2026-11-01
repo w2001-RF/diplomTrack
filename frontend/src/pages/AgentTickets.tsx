@@ -6,24 +6,14 @@ import { DataTable } from '@/components/common/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { milestoneCodeOf } from '@/lib/tickets';
+import { milestoneCodeOf, STATUS_LABELS } from '@/lib/tickets';
 import { useTicketsQuery } from '@/hooks/api/useTicketsQuery';
 import { Plus, Loader2, Ticket, Trash2, Upload, Clock } from 'lucide-react';
 import type { TicketStatus } from '@/lib/api/models';
 import { UserRole } from '@/constants/roles';
 import { TicketImportDialog } from '@/components/tickets/TicketImportDialog';
 
-const statusLabels: Record<TicketStatus, string> = {
-  CREATED: 'Créé',
-  DOSSIER_EN_COURS: 'Dossier en cours',
-  PIECES_COMPLETES: 'Pièces complètes',
-  EN_ATTENTE_REPONSE: 'En attente de réponse',
-  REPONSE_RECUE: 'Réponse reçue',
-  DOSSIER_CLOTURE: 'Dossier clôturé',
-  BLOQUE_PIECE_MANQUANTE: 'Bloqué - pièce manquante',
-  REJETE: 'Rejeté',
-  ARCHIVE: 'Archivé'
-};
+const statusLabels = STATUS_LABELS;
 
 const getStatusColor = (status: TicketStatus) => {
   switch (status) {

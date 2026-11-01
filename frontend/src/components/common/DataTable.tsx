@@ -8,6 +8,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Search, Plus, X, Loader2, CheckSquare, Square, FileSpreadsheet, Trash2 } from 'lucide-react';
 
+/** Value at a dotted path, e.g. valueAt(ticket, 'student.last_name') */
+function valueAt(item: unknown, path: string): unknown {
+  return path.split('.').reduce<unknown>(
+    (value, key) => (value == null ? undefined : (value as Record<string, unknown>)[key]),
+    item
+  );
+}
+
 export interface DataTableColumn<T> {
   key: string;
   label: string;
@@ -44,7 +52,8 @@ export interface DataTableConfig<T> {
   
   // Recherche
   searchPlaceholder?: string;
-  searchKeys: (keyof T)[];
+  /** Field names, or dotted paths into nested objects ('student.last_name') */
+  searchKeys: (keyof T | `${string}.${string}`)[];
   
   // Filtres
   filters?: DataTableFilter[];
@@ -138,8 +147,8 @@ export function DataTable<T>({
         // Search filter
         const q = searchQuery.toLowerCase();
         const matchesSearch = searchKeys.some(key => {
-        const value = item[key];
-        return String(value || '').toLowerCase().includes(q);
+        const value = valueAt(item, String(key));
+        return String(value ?? '').toLowerCase().includes(q);
         });
 
         // Custom filters avec logique spéciale
@@ -148,22 +157,16 @@ export function DataTable<T>({
         
         // Logique spéciale pour formationType
         if (key === 'formationType') {
-            const formation = (data as any).formations?.find((f: any) => 
-            f.id === (item as any).formation_id
-            );
-            return formation?.formation_type?.code === value;
+            return valueAt(item, 'formation.formation_type.code') === value;
         }
         
         // Logique spéciale pour professorId
         if (key === 'professorId') {
-            const formation = (data as any).formations?.find((f: any) => 
-            f.id === (item as any).formation_id
-            );
-            return String(formation?.professor_responsible?.id) === value;
+            return String(valueAt(item, 'formation.professor_responsible.id')) === value;
         }
         
         // Filtrage standard
-        return String((item as any)[key]) === value;
+        return String(valueAt(item, key)) === value;
         });
 
         return matchesSearch && matchesFilters;
@@ -484,7 +487,7 @@ export function DataTable<T>({
                       <div className="flex-1 grid gap-4" style={{ gridTemplateColumns: `repeat(${columns.length}, 1fr)` }}>
                         {columns.map(col => (
                           <div key={col.key}>
-                            {col.render ? col.render(item) : String((item as any)[col.key] || '')}
+                            {col.render ? col.render(item) : String(valueAt(item, col.key) ?? '')}
                           </div>
                         ))}
                       </div>

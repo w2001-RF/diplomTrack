@@ -213,7 +213,7 @@ export function ImportStudentsDialog({ open, onOpenChange, onImport, isImporting
                             );
                             if (matchingFormation) {
                                 setFormationName(matchingFormation.formation_name);
-                                setFormationType(matchingFormation.formation_type?.code)
+                                setFormationType((matchingFormation.formation_type?.code ?? '') as 'LUS' | 'MUS' | '')
                             }
                         }
                     }}>
