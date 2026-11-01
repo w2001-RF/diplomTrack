@@ -1,5 +1,4 @@
 import os
-import traceback
 
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -7,14 +6,7 @@ from config import Config
 from extensions import db, jwt, mail
 from models import *
 from routes import register_routes
-from werkzeug.exceptions import HTTPException
-from exceptions import (
-    APIException,
-    ValidationError,
-    AuthenticationError,
-    AuthorizationError,
-    NotFoundError
-)
+from error_handlers import register_error_handlers
 from tasks.scheduler import init_scheduler
 
 def create_app():
@@ -51,101 +43,7 @@ def create_app():
         if request.method == 'OPTIONS':
             return '', 204
 
-    # ---------------------------------------------------------
-    # Global error handler for custom API exceptions
-    # ---------------------------------------------------------
-    @app.errorhandler(APIException)
-    def handle_api_exception(e):
-        is_dev = (
-            os.getenv("FLASK_ENV") == "development"
-            or app.debug is True
-            or app.config.get("DEBUG") is True
-        )
-
-        payload = {
-            "error": e.message,
-            "code": e.code,
-            "status": e.status_code
-        }
-
-        if is_dev:
-            payload["type"] = type(e).__name__
-            payload["trace"] = traceback.format_exc()
-
-        return jsonify(payload), e.status_code
-
-    # ---------------------------------------------------------
-    # Global error handler for ValidationError specifically
-    # ---------------------------------------------------------
-    @app.errorhandler(ValidationError)
-    def handle_validation_error(e):
-        is_dev = (
-            os.getenv("FLASK_ENV") == "development"
-            or app.debug is True
-            or app.config.get("DEBUG") is True
-        )
-
-        payload = {
-            "error": e.message,
-            "code": e.code,
-            "status": e.status_code
-        }
-
-        if is_dev:
-            payload["type"] = type(e).__name__
-            payload["trace"] = traceback.format_exc()
-
-        return jsonify(payload), e.status_code
-
-    # ---------------------------------------------------------
-    # Global error handler for HTTP exceptions
-    # ---------------------------------------------------------
-    @app.errorhandler(HTTPException)
-    def handle_http_exception(e):
-        is_dev = (
-            os.getenv("FLASK_ENV") == "development"
-            or app.debug is True
-            or app.config.get("DEBUG") is True
-        )
-
-        payload = {
-            "error": e.description or str(e),
-            "code": e.code,
-            "status": e.code,
-            "name": e.name
-        }
-
-        if is_dev:
-            payload["trace"] = traceback.format_exc()
-
-        return jsonify(payload), e.code
-
-    # ---------------------------------------------------------
-    # Global error handler for all other exceptions
-    # ---------------------------------------------------------
-    @app.errorhandler(Exception)
-    def handle_exception(e):
-        is_dev = (
-            os.getenv("FLASK_ENV") == "development"
-            or app.debug is True
-            or app.config.get("DEBUG") is True
-        )
-
-        status_code = getattr(e, 'status_code', 500)
-        error_code = getattr(e, 'code', status_code)
-        error_message = getattr(e, 'message', str(e))
-
-        payload = {
-            "error": error_message,
-            "code": error_code,
-            "status": status_code
-        }
-
-        if is_dev:
-            payload["type"] = type(e).__name__
-            payload["trace"] = traceback.format_exc()
-
-        return jsonify(payload), status_code
+    register_error_handlers(app)
 
     with app.app_context():
         db.create_all()

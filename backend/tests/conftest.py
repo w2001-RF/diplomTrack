@@ -1,7 +1,8 @@
 import pytest
 from flask import Flask
 from flask_jwt_extended import JWTManager
-from routes.auth_routes import auth_bp 
+from error_handlers import register_error_handlers
+from routes.auth_routes import auth_bp
 
 @pytest.fixture()
 def app():
@@ -11,6 +12,8 @@ def app():
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
 
     JWTManager(app)
+    # Same JSON error responses as create_app()
+    register_error_handlers(app)
 
     app.register_blueprint(auth_bp)
     return app
