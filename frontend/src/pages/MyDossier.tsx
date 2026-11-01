@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { milestoneCodeOf } from '@/lib/tickets';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
@@ -82,11 +83,11 @@ export default function MyDossier() {
 
   // Fetch student by user_id
   const studentQuery = useStudentByUserQuery(user?.id);
-  const student = studentQuery.data?.students[0];
+  const student = studentQuery.data;
   
   // Fetch tickets for the student  
   const ticketsQuery = useTicketsQuery({ enabled: !!student?.id });
-  const tickets = ticketsQuery.tickets || [];
+  const tickets = ticketsQuery.tickets;
 
   // Fetch notifications for the user
   const notificationsQuery = useNotificationsQuery({ userId: user?.id, limit: 10 });
@@ -128,7 +129,7 @@ export default function MyDossier() {
   };
 
   const getCurrentMilestone = (ticket: Ticket) => {
-    return milestones.find(m => m.code === ticket.status);
+    return milestones.find(m => m.code === milestoneCodeOf(ticket));
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -295,7 +296,7 @@ export default function MyDossier() {
             {/* Ticket Timeline */}
             {tickets?.total > 0 ? (
               tickets.tickets.map((ticket) => {
-                const currentMilestone = milestones.find(m => m.code === ticket.status);
+                const currentMilestone = milestones.find(m => m.code === milestoneCodeOf(ticket));
                 const ticketNotifications = notificationsList.filter(n => n.ticket_id === ticket.id);
 
                 return (
@@ -305,9 +306,9 @@ export default function MyDossier() {
                         <div className="space-y-1">
                           <CardTitle className="text-lg flex items-center gap-3">
                             {ticket.reference}
-                            <Badge className={`${getStatusColor(ticket.status)} text-primary-foreground`}>
-                              {getStatusIcon(ticket.status)}
-                              <span className="ml-1">{statusLabels[ticket.status]}</span>
+                            <Badge className={`${getStatusColor(milestoneCodeOf(ticket))} text-primary-foreground`}>
+                              {getStatusIcon(milestoneCodeOf(ticket))}
+                              <span className="ml-1">{statusLabels[milestoneCodeOf(ticket)]}</span>
                             </Badge>
                           </CardTitle>
                           <CardDescription>
@@ -329,7 +330,7 @@ export default function MyDossier() {
                         <h4 className="font-medium mb-4">Historique chronologique</h4>
                         <div className="relative">
                           {milestones.map((milestone, index) => {
-                            const isCurrent = milestone.code === ticket.status;
+                            const isCurrent = milestone.code === milestoneCodeOf(ticket);
                             const isPast = currentMilestone ? milestone.order < currentMilestone.order : false;
                             const isFuture = currentMilestone ? milestone.order > currentMilestone.order : true;
 

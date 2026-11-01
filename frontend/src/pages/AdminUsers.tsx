@@ -1,7 +1,7 @@
 //react
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Search, Shield, User, Users, Loader2, Plus, Upload, Trash2 } from 'lucide-react';
+import { Search, Shield, User, Users, Loader2, Plus, Upload, Trash2, UserCog } from 'lucide-react';
 
 //components
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -89,7 +89,7 @@ export default function AdminUsers() {
     };
   });
 
-  const isLoading = profilesQuery.isLoading || rolesQuery.isLoading;
+  const isLoading = profilesQuery.isLoading || rolesQuery.loading;
 
   const handleBulkCreateAgents = async () => {
     const emails = bulkEmails
@@ -330,6 +330,19 @@ export default function AdminUsers() {
                       <TableCell className="text-right">
                         {user?.role !== UserRole.ADMIN && (
                           <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Modifier le rôle"
+                              title="Modifier le rôle"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setNewRole(user.role === UserRole.AGENT ? UserRole.STUDENT : UserRole.AGENT);
+                                setDialogOpen(true);
+                              }}
+                            >
+                              <UserCog className="h-4 w-4" />
+                            </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button 

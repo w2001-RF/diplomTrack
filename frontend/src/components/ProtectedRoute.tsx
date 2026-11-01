@@ -49,12 +49,12 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   // If student tries to access root, redirect to my-dossier
-  if (role === UserRole.STUDENT && window.location.pathname === '/') {
+  if (role === UserRole.STUDENT && location.pathname === '/') {
     return <Navigate to="/my-dossier" replace />;
   }
 
   // If admin tries to access root, redirect to admin dashboard
-  if (role === UserRole.ADMIN && window.location.pathname === '/') {
+  if (role === UserRole.ADMIN && location.pathname === '/') {
     return <Navigate to="/admin" replace />;
   }
 

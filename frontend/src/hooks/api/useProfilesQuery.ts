@@ -35,7 +35,8 @@ export function useUpdateProfile() {
 
   return useMutation({
     mutationFn: async ({ profileId, data }: { profileId: string; data: ProfileUpdate }) => {
-      const { error } = await api.data.update<ProfileRow>('profiles', profileId, data);
+      // Flask only accepts PUT on /api/profiles/<id>
+      const { error } = await api.data.update<ProfileRow>('profiles', profileId, data, 'PUT');
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { fetchAllPages } from '@/lib/api/pagination';
 import type { TicketRow, TicketInsert, TicketUpdate, StudentRow, TicketStatus } from '@/lib/api/models';
 import { toast } from 'sonner';
 import { CACHE_KEYS, defaultCacheConfig } from './useApiCache';
@@ -20,6 +21,7 @@ export interface TicketListResponse {
 }
 
 const EMPTY_TICKET_LIST: TicketListResponse = { tickets: [], total: 0, pages: 0, page: 1, length: 0 };
+const PAGE_SIZE = 100;
 
 interface UseTicketsQueryOptions {
   withStudent?: boolean;
@@ -37,13 +39,17 @@ export function useTicketsQuery(options: UseTicketsQueryOptions = {}) {
   const ticketsQuery = useQuery({
     queryKey: [CACHE_KEYS.TICKETS],
     queryFn: async (): Promise<TicketListResponse> => {
-      // The pages read the envelope (tickets + total), so keep it whole
-      const { data, error } = await api.data.customRequest<TicketListResponse>('tickets', {
-        query: { sort: [{ field: 'created_at', direction: 'desc' }] }
-      });
+      // The API pages tickets (`length`, default 10); dashboards need them all
+      const { items, total } = await fetchAllPages<TicketWithStudent>(async (page, size) => {
+        const { data, error } = await api.data.customRequest<TicketListResponse>('tickets', {
+          query: { sort: [{ field: 'created_at', direction: 'desc' }] },
+          queryParams: { page, length: size },
+        });
+        return { data: data && { items: data.tickets, total: data.total }, error };
+      }, PAGE_SIZE);
 
-      if (error) throw new Error(error.message);
-      return data ?? EMPTY_TICKET_LIST;
+      // Pages read the envelope (tickets + total), now covering every page
+      return { tickets: items, total, pages: 1, page: 1, length: items.length };
     },
     enabled,
     staleTime: defaultCacheConfig.staleTime,
@@ -68,20 +74,6 @@ export function useTicketsQuery(options: UseTicketsQueryOptions = {}) {
     }
   });
 
-  // Mutation for updating tickets
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: TicketUpdate }) => {
-      const { error } = await api.data.update<TicketRow>('tickets', id, data);
-      if (error) throw new Error(error.message);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.TICKETS] });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Erreur lors de la mise à jour du ticket');
-    }
-  });
-
   // Mutation for deleting tickets
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -94,26 +86,6 @@ export function useTicketsQuery(options: UseTicketsQueryOptions = {}) {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Erreur lors de la suppression du ticket');
-    }
-  });
-
-  // Mutation for updating status
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status, milestoneId }: { id: string; status: TicketStatus; milestoneId?: string }) => {
-      const updateData: TicketUpdate = { status };
-      if (milestoneId) {
-        updateData.current_milestone_id = milestoneId;
-      }
-      
-      const { error } = await api.data.update<TicketRow>('tickets', id, updateData);
-      if (error) throw new Error(error.message);
-    },
-    onSuccess: () => {
-      toast.success('Statut mis à jour');
-      queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.TICKETS] });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Erreur lors de la mise à jour du statut');
     }
   });
 
@@ -182,16 +154,12 @@ export function useTicketsQuery(options: UseTicketsQueryOptions = {}) {
     
     // Mutations
     createTicket: createMutation.mutateAsync,
-    updateTicket: (id: string, data: TicketUpdate) => updateMutation.mutateAsync({ id, data }),
     deleteTicket: deleteMutation.mutateAsync,
-    updateStatus: (id: string, status: TicketStatus, milestoneId?: string) => 
-      updateStatusMutation.mutateAsync({ id, status, milestoneId }),
     importTickets: importMutation.mutateAsync,
     createAdvancedTicket: createAdvancedTicketMutation.mutateAsync,
     
     // Mutation states
     isCreating: createMutation.isPending,
-    isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
     isImporting: importMutation.isPending,
     isCreatingAdvanced: createAdvancedTicketMutation.isPending,

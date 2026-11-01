@@ -64,6 +64,12 @@ describe('ProtectedRoute', () => {
     expect(location()).toBe(target);
   });
 
+  it.each([UserRole.ADMIN, UserRole.STUDENT])('renders an allowed page for %s (uses the router location)', (role) => {
+    // ProtectedRoute used to read window.location, which is "/" outside a BrowserRouter
+    renderWithProviders(page([role]), { path: '/users', auth: signedIn(role) });
+    expect(screen.getByRole('heading', { name: 'Page protégée' })).toBeInTheDocument();
+  });
+
   it('shows the forced password reset instead of the page', () => {
     renderWithProviders(page(), { path: '/dossiers', auth: signedIn(UserRole.ADMIN, { mustResetPassword: true }) });
 

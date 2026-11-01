@@ -126,7 +126,7 @@ export function useDocumentsQuery(options: UseDocumentsQueryOptions = {}) {
     // Mutations
     uploadDocument: uploadMutation.mutateAsync,
     validateDocument: (id: string, comment?: string) => validateMutation.mutateAsync({ id, comment }),
-    inValidateDocument: (id: string, reason: string) => invalidateMutation.mutateAsync({ id, reason }),
+    inValidateDocument: (id: string, comment: string) => invalidateMutation.mutateAsync({ id, comment }),
     deleteDocument: deleteMutation.mutateAsync,
     
     // Mutation states

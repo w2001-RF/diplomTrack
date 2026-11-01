@@ -49,7 +49,10 @@ export function fakeAuth(overrides: Partial<AuthContextType> = {}): AuthContextT
 }
 
 interface RenderOptions {
+  /** Route pattern of the element under test, e.g. /dossier/:id */
   path?: string;
+  /** URL to start at when it differs from `path`, e.g. /dossier/5 */
+  initialPath?: string;
   /** Extra routes rendered next to the element under test */
   routes?: Record<string, ReactElement>;
   /** Use a fake auth context instead of the real AuthProvider */
@@ -60,7 +63,7 @@ interface RenderOptions {
  * Render `ui` at `path` inside a router, QueryClient and auth provider.
  * Every other path renders a LocationProbe, so redirects are observable.
  */
-export function renderWithProviders(ui: ReactElement, { path = '/', routes = {}, auth }: RenderOptions = {}) {
+export function renderWithProviders(ui: ReactElement, { path = '/', initialPath, routes = {}, auth }: RenderOptions = {}) {
   const client = createTestQueryClient();
   const tree = (
     <Routes>
@@ -74,7 +77,7 @@ export function renderWithProviders(ui: ReactElement, { path = '/', routes = {},
 
   const result = render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
+      <MemoryRouter initialEntries={[initialPath ?? path]}>
         {auth ? <AuthContext.Provider value={auth}>{tree}</AuthContext.Provider> : <AuthProvider>{tree}</AuthProvider>}
       </MemoryRouter>
     </QueryClientProvider>

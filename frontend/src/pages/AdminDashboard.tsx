@@ -32,6 +32,7 @@ import {
   Area
 } from 'recharts';
 import type { TicketStatus, MilestoneHistoryRow, ProfileRow } from '@/lib/api/models';
+import { milestoneCodeOf } from '@/lib/tickets';
 
 interface AgentStats {
   agent_id: string;
@@ -124,18 +125,18 @@ export default function AdminDashboard() {
         yearlyMap[year] = { year, total: 0, closed: 0, blocked: 0 };
       }
       yearlyMap[year].total++;
-      if (ticket.status === 'DOSSIER_CLOTURE') yearlyMap[year].closed++;
-      if (ticket.status === 'BLOQUE_PIECE_MANQUANTE') yearlyMap[year].blocked++;
+      if (milestoneCodeOf(ticket) === 'DOSSIER_CLOTURE') yearlyMap[year].closed++;
+      if (milestoneCodeOf(ticket) === 'BLOQUE_PIECE_MANQUANTE') yearlyMap[year].blocked++;
 
       // Status distribution
-      statusMap[ticket.status] = (statusMap[ticket.status] || 0) + 1;
+      statusMap[milestoneCodeOf(ticket)] = (statusMap[milestoneCodeOf(ticket)] || 0) + 1;
 
       // Monthly trend
       const date = new Date(ticket.created_at);
       if (date.getFullYear() === currentYear) {
         const month = months[date.getMonth()];
         monthlyMap[month].created++;
-        if (ticket.status === 'DOSSIER_CLOTURE') {
+        if (milestoneCodeOf(ticket) === 'DOSSIER_CLOTURE') {
           monthlyMap[month].closed++;
         }
       }
@@ -150,10 +151,10 @@ export default function AdminDashboard() {
     const calculatedStats = {
       total: tickets?.total,
       pending: tickets?.tickets?.filter(t => 
-        ['CREATED', 'OPEN', 'IN_PROGRESS', 'DOSSIER_EN_COURS', 'PIECES_COMPLETES'].includes(t.status)
+        ['CREATED', 'OPEN', 'IN_PROGRESS', 'DOSSIER_EN_COURS', 'PIECES_COMPLETES'].includes(milestoneCodeOf(t))
       ).length,
-      blocked: tickets?.tickets?.filter(t => t.status === 'BLOQUE_PIECE_MANQUANTE').length,
-      closed: tickets?.tickets?.filter(t => t.status === 'DOSSIER_CLOTURE').length,
+      blocked: tickets?.tickets?.filter(t => milestoneCodeOf(t) === 'BLOQUE_PIECE_MANQUANTE').length,
+      closed: tickets?.tickets?.filter(t => milestoneCodeOf(t) === 'DOSSIER_CLOTURE').length,
     };
     console.log("calculatedStats:", calculatedStats);
 
