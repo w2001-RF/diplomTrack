@@ -17,9 +17,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { BulkAgentPasswordsDialog, type CreatedAgentCredential } from "@/components/admin/BulkAgentPasswordsDialog";
 
-//supabase
-import type { Database } from '@/integrations/supabase/types';
-import { supabase } from '@/integrations/supabase/client';
+//api
+import { api } from '@/lib/api';
+import type { AppRole, ProfileRow as Profile, UserRoleRow } from '@/lib/api/models';
 
 //hooks
 import { useAllProfilesQuery } from '@/hooks/api/useProfilesQuery';
@@ -28,31 +28,27 @@ import { useDeleteUserMutation } from '@/hooks/api/useDeleteUserMutation';
 import { useBulkCreateAgentsMutation } from '@/hooks/api/useBulkCreateAgentsMutation';
 import { UserRole } from '@/constants/roles';
 
-type AppRole = Database['public']['Enums']['app_role'];
-type Profile = Database['public']['Tables']['profiles']['Row'];
-type UserRoleRow = Database['public']['Tables']['user_roles']['Row'];
-
 interface UserWithRole extends Profile {
   role: AppRole;
   role_id: string;
 }
 
 const roleLabels: Record<AppRole, string> = {
-  student: 'Étudiant',
-  agent: 'Agent BFC',
-  admin: 'Administrateur'
+  [UserRole.STUDENT]: 'Étudiant',
+  [UserRole.AGENT]: 'Agent BFC',
+  [UserRole.ADMIN]: 'Administrateur'
 };
 
 const roleColors: Record<AppRole, string> = {
-  student: 'bg-secondary text-secondary-foreground',
-  agent: 'bg-primary text-primary-foreground',
-  admin: 'bg-[hsl(var(--status-validated))] text-primary-foreground'
+  [UserRole.STUDENT]: 'bg-secondary text-secondary-foreground',
+  [UserRole.AGENT]: 'bg-primary text-primary-foreground',
+  [UserRole.ADMIN]: 'bg-[hsl(var(--status-validated))] text-primary-foreground'
 };
 
 const roleIcons: Record<AppRole, React.ReactNode> = {
-  student: <User className="h-4 w-4" />,
-  agent: <Users className="h-4 w-4" />,
-  admin: <Shield className="h-4 w-4" />
+  [UserRole.STUDENT]: <User className="h-4 w-4" />,
+  [UserRole.AGENT]: <Users className="h-4 w-4" />,
+  [UserRole.ADMIN]: <Shield className="h-4 w-4" />
 };
 
 export default function AdminUsers() {
@@ -145,10 +141,7 @@ export default function AdminUsers() {
 
     setUpdatingUserId(selectedUser.user_id);
     try {
-      const { error } = await supabase
-        .from('user_roles')
-        .update({ role: newRole })
-        .eq('user_id', selectedUser.user_id);
+      const { error } = await api.data.update('admin/users', String(selectedUser.user_id), { role: newRole }, 'PUT');
 
       if (error) throw error;
 
@@ -328,7 +321,7 @@ export default function AdminUsers() {
                       </TableCell>
                       <TableCell>
                         <Badge className={roleColors[user.role]}>
-                          {roleLabels[user.role.toLocaleLowerCase()]}
+                          {roleLabels[user.role]}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
@@ -395,13 +388,13 @@ export default function AdminUsers() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="student">
+                  <SelectItem value={UserRole.STUDENT}>
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4" />
                       Étudiant
                     </div>
                   </SelectItem>
-                  <SelectItem value="agent">
+                  <SelectItem value={UserRole.AGENT}>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4" />
                       Agent BFC

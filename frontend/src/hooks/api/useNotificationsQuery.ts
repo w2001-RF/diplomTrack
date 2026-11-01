@@ -1,22 +1,25 @@
+import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { Database } from '@/integrations/supabase/types';
+import type { NotificationRow } from '@/lib/api/models';
 import { toast } from 'sonner';
 import { CACHE_KEYS, defaultCacheConfig } from './useApiCache';
-
-type NotificationRow = Database['public']['Tables']['notifications']['Row'];
 
 interface UseNotificationsQueryOptions {
   userId?: string;
   enabled?: boolean;
   limit?: number;
+  /** Polling interval in ms; the API has no push channel (default 60 s, false to disable) */
+  pollInterval?: number | false;
+  /** Show a toast when polling brings in notifications that were not there before */
+  notifyOnNew?: boolean;
 }
 
 /**
  * React Query-based hook for notifications with caching
  */
 export function useNotificationsQuery(options: UseNotificationsQueryOptions = {}) {
-  const { userId, enabled = true, limit } = options;
+  const { userId, enabled = true, limit, pollInterval = 60 * 1000, notifyOnNew = false } = options;
   const queryClient = useQueryClient();
 
   // Main query for fetching notifications
@@ -25,8 +28,8 @@ export function useNotificationsQuery(options: UseNotificationsQueryOptions = {}
     queryFn: async (): Promise<NotificationRow[]> => {
       if (!userId) return [];
 
+      // The API scopes notifications to the JWT's user
       const { data, error } = await api.data.getMany<NotificationRow>('notifications', {
-        filters: [{ field: 'user_id', operator: 'eq', value: userId }],
         sort: [{ field: 'created_at', direction: 'desc' }],
         limit
       });
@@ -38,12 +41,25 @@ export function useNotificationsQuery(options: UseNotificationsQueryOptions = {}
     staleTime: 30 * 1000, // Notifications refresh more frequently - 30 seconds
     gcTime: defaultCacheConfig.cacheTime,
     refetchOnWindowFocus: true,
+    refetchInterval: pollInterval,
   });
+
+  // Toast for notifications that arrived since the previous fetch
+  const seenIds = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const data = notificationsQuery.data;
+    if (!data) return;
+    const ids = new Set(data.map((n) => String(n.id)));
+    if (notifyOnNew && seenIds.current && data.some((n) => !seenIds.current!.has(String(n.id)))) {
+      toast.info('Nouvelle notification reçue');
+    }
+    seenIds.current = ids;
+  }, [notificationsQuery.data, notifyOnNew]);
 
   // Mutation for marking a notification as read
   const markAsReadMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.data.update<NotificationRow>('notifications', id, { read: true });
+      const { error } = await api.data.customRequest(`notifications/${id}/read`, { method: 'PATCH' });
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
@@ -57,14 +73,8 @@ export function useNotificationsQuery(options: UseNotificationsQueryOptions = {}
   // Mutation for marking all notifications as read
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      const notifications = notificationsQuery.data || [];
-      const unreadNotifications = notifications.filter(n => !n.read);
-      
-      await Promise.all(
-        unreadNotifications.map(n => 
-          api.data.update<NotificationRow>('notifications', n.id, { read: true })
-        )
-      );
+      const { error } = await api.data.customRequest('notifications/read-all', { method: 'PATCH' });
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       toast.success('Toutes les notifications ont été marquées comme lues');
@@ -115,15 +125,7 @@ export function useNotificationsQuery(options: UseNotificationsQueryOptions = {}
   });
 
   const notifications = notificationsQuery.data || [];
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  // Add a new notification locally (for realtime updates)
-  const addNotification = (notification: NotificationRow) => {
-    queryClient.setQueryData<NotificationRow[]>(
-      [CACHE_KEYS.NOTIFICATIONS, userId, { limit }],
-      (old) => old ? [notification, ...old] : [notification]
-    );
-  };
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return {
     // Query state
@@ -135,7 +137,6 @@ export function useNotificationsQuery(options: UseNotificationsQueryOptions = {}
     
     // Query actions
     refetch: notificationsQuery.refetch,
-    addNotification,
     
     // Mutations
     markAsRead: markAsReadMutation.mutateAsync,

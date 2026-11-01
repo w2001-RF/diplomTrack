@@ -1,13 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { Database } from '@/integrations/supabase/types';
+import type { MilestoneRow, MilestoneHistoryRow, MilestoneHistoryInsert, ProfileRow } from '@/lib/api/models';
 import { toast } from 'sonner';
 import { CACHE_KEYS, defaultCacheConfig } from './useApiCache';
-
-type MilestoneRow = Database['public']['Tables']['milestones']['Row'];
-type MilestoneHistoryRow = Database['public']['Tables']['ticket_milestone_history']['Row'];
-type MilestoneHistoryInsert = Database['public']['Tables']['ticket_milestone_history']['Insert'];
-type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
 export interface MilestoneHistoryWithDetails extends MilestoneHistoryRow {
   from_milestone?: MilestoneRow | null;

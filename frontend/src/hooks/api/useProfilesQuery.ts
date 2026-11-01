@@ -1,11 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { Database } from '@/integrations/supabase/types';
+import type { ProfileRow, ProfileUpdate } from '@/lib/api/models';
 import { toast } from 'sonner';
 import { CACHE_KEYS, defaultCacheConfig } from './useApiCache';
-
-type ProfileRow = Database['public']['Tables']['profiles']['Row'];
-type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 
 /**
  * Hook to fetch a profile by user_id

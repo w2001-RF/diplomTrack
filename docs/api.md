@@ -93,7 +93,7 @@ Authorization: Bearer <token>
 
 | Method | Path | Roles | Description |
 |---|---|---|---|
-| GET | `` | — | Current user's notifications (filter: unread only) |
+| GET | `` | — | Current user's notifications (`?unread=true` for unread only). Each item: `id, user_id, ticket_id, type, title, message, is_read, created_at` |
 | PATCH | `/<id>/read` | — | Mark one as read |
 | PATCH | `/read-all` | — | Mark all as read |
 | DELETE | `/<id>` | — | Delete one |

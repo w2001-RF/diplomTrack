@@ -15,10 +15,8 @@ import {
   Loader2,
   TrendingUp
 } from 'lucide-react';
-import type { Database } from '@/integrations/supabase/types';
+import type { TicketStatus } from '@/lib/api/models';
 import { useAuth } from '@/hooks/useAuth';
-
-type TicketStatus = Database['public']['Enums']['ticket_status'];
 
 const statusLabels: Record<TicketStatus, string> = {
   CREATED: 'Créé',

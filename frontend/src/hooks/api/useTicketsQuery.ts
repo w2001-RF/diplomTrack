@@ -1,14 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { Database } from '@/integrations/supabase/types';
+import type { TicketRow, TicketInsert, TicketUpdate, StudentRow, TicketStatus } from '@/lib/api/models';
 import { toast } from 'sonner';
 import { CACHE_KEYS, defaultCacheConfig } from './useApiCache';
 
-type TicketRow = Database['public']['Tables']['tickets']['Row'];
-type TicketInsert = Database['public']['Tables']['tickets']['Insert'];
-type TicketUpdate = Database['public']['Tables']['tickets']['Update'];
-type StudentRow = Database['public']['Tables']['students']['Row'];
-type TicketStatus = Database['public']['Enums']['ticket_status'];
 
 export interface TicketWithStudent extends TicketRow {
   student?: StudentRow;

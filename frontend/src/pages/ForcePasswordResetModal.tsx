@@ -50,10 +50,10 @@ export const ForcePasswordResetModal = () => {
     setIsSubmitting(true);
 
     try {
-      const { data } = await resetPassword(passwordData.newPassword);
+      const { error } = await resetPassword(passwordData.newPassword);
 
-      if (data?.error) {
-        throw data?.error;
+      if (error) {
+        throw error;
       }
 
       toast({

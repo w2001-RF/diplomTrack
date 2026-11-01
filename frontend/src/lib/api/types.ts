@@ -75,32 +75,3 @@ export interface AuthResponse {
   session: AuthSession | null;
   error: ApiError | null;
 }
-
-// Storage types
-export interface StorageUploadResult {
-  path: string;
-  url?: string;
-}
-
-export interface StorageFile {
-  name: string;
-  size: number;
-  type: string;
-  lastModified: number;
-}
-
-// Realtime types
-export type RealtimeEventType = 'INSERT' | 'UPDATE' | 'DELETE' | '*';
-
-export interface RealtimePayload<T = unknown> {
-  eventType: RealtimeEventType;
-  new: T | null;
-  old: T | null;
-  table: string;
-}
-
-export type RealtimeCallback<T = unknown> = (payload: RealtimePayload<T>) => void;
-
-export interface RealtimeSubscription {
-  unsubscribe: () => void;
-}

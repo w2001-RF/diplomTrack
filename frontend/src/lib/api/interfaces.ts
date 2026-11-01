@@ -1,6 +1,6 @@
-// Abstract interfaces for API operations
+// Abstract interfaces for API operations. Hooks depend on these, not on a
+// concrete adapter, so the backend can be swapped by writing a new adapter.
 
-import { AnyRecord } from 'dns';
 import type {
   ApiResponse,
   AuthResponse,
@@ -10,76 +10,68 @@ import type {
   AuthSession,
   QueryParams,
   FilterParams,
-  StorageUploadResult,
-  RealtimeCallback,
-  RealtimeSubscription,
-  RealtimeEventType,
 } from './types';
+import type { RequestOptions } from './http';
+
+export type CustomRequestOptions = Pick<RequestOptions, 'method' | 'body' | 'headers' | 'queryParams' | 'query'>;
+
+export interface ImportResult {
+  success: boolean;
+  imported: number;
+  failed: number;
+  total: number;
+  results: unknown[];
+}
 
 /**
- * Generic CRUD operations interface
+ * Resource operations. `resource` is a path under the API base URL
+ * (e.g. 'tickets', 'admin/users').
  */
 export interface IDataService {
-
-  customRequest<T>(
-    endpoint: string,
-    options?: {
-      method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-      body?: any;
-      headers?: Record<string, string>;
-      queryParams?: Record<string, string | number | boolean>;
-    }
-  ): Promise<ApiResponse<T>>;
-  
   /**
-   * Get a single record by ID
+   * Call an endpoint that does not fit the CRUD helpers below
    */
-  getOne<T = unknown>(table: string, id: string, select?: string[]): Promise<ApiResponse<T>>;
+  customRequest<T>(endpoint: string, options?: CustomRequestOptions): Promise<ApiResponse<T>>;
 
   /**
-   * Get multiple records with optional filtering, sorting, and pagination
+   * GET /<resource>/<id>
    */
-  getMany<T = unknown>(table: string, params?: QueryParams): Promise<ApiResponse<T[]>>;
+  getOne<T = unknown>(resource: string, id: string, select?: string[]): Promise<ApiResponse<T>>;
 
   /**
-   * Create a new record
+   * GET /<resource> with optional filtering, sorting, and pagination
    */
-  create<T = unknown>(table: string, data: Partial<T>): Promise<ApiResponse<T>>;
+  getMany<T = unknown>(resource: string, params?: QueryParams): Promise<ApiResponse<T[]>>;
 
   /**
-   * Create multiple records
+   * POST /<resource>
    */
-  createMany<T = unknown>(table: string, data: Partial<T>[]): Promise<ApiResponse<T[]>>;
-  
-  /**
-   * Import multiple records
-   */
-  import<T = unknown>(table: string, data: Partial<T>[]): Promise<ApiResponse<T[]>>;
+  create<T = unknown>(resource: string, data: Partial<T>): Promise<ApiResponse<T>>;
 
   /**
-   * Update a record by ID
+   * POST /<resource>/bulk
    */
-  update<T = unknown>(table: string, id: string, data: Partial<T>, method: 'PUT' | 'PATCH'): Promise<ApiResponse<T>>;
+  createMany<T = unknown>(resource: string, data: Partial<T>[]): Promise<ApiResponse<T[]>>;
 
   /**
-   * Update multiple records matching filters
+   * POST /<resource>/import
    */
-  updateMany<T = unknown>(table: string, data: Partial<T>, params?: QueryParams): Promise<ApiResponse<T[]>>;
+  import(resource: string, data: unknown): Promise<ApiResponse<ImportResult>>;
 
   /**
-   * Delete a record by ID
+   * PUT or PATCH /<resource>/<id>
    */
-  delete(table: string, id: string): Promise<ApiResponse<null>>;
+  update<T = unknown>(resource: string, id: string, data: Partial<T>, method?: 'PUT' | 'PATCH'): Promise<ApiResponse<T>>;
 
   /**
-   * Delete multiple records matching filters
+   * DELETE /<resource>/<id>
    */
-  deleteMany(table: string, filters?: FilterParams[]): Promise<ApiResponse<null>>;
+  delete(resource: string, id: string): Promise<ApiResponse<null>>;
 
   /**
-   * Execute a custom query (for complex operations)
+   * DELETE /<resource>/bulk with filters
    */
-  query<R = unknown>(table: string, queryFn: (query: unknown) => unknown): Promise<ApiResponse<R>>;
+  deleteMany(resource: string, filters?: FilterParams[]): Promise<ApiResponse<null>>;
 }
 
 /**
@@ -112,145 +104,31 @@ export interface IAuthService {
   signOut(): Promise<{ error: Error | null }>;
 
   /**
-   * Reset password
+   * Change the current user's password
    */
-  resetPassword(newPassword: string): Promise<{ data: AnyRecord | null }>;
+  resetPassword(newPassword: string): Promise<{ data: Record<string, unknown> | null; error: Error | null }>;
 
   /**
    * Upload profile image
    */
   uploadProfileImage(userId: number, file: File): Promise<ApiResponse<{ profile_image: string }>>;
-  
+
   /**
    * Delete profile image
    */
   deleteProfileImage(userId: number): Promise<ApiResponse<null>>;
-  
+
   /**
    * Get profile image
    */
   getProfileImageUrl(userId: number): string;
+
   /**
-   * Subscribe to auth state changes
+   * Subscribe to auth state changes (SIGNED_IN, SIGNED_UP, SIGNED_OUT, SESSION_EXPIRED)
    */
   onAuthStateChange(
     callback: (event: string, session: AuthSession | null) => void
   ): { unsubscribe: () => void };
-}
-
-/**
- * Storage service interface
- */
-export interface IStorageService {
-  /**
-   * Upload a file
-   */
-  upload(
-    bucket: string,
-    path: string,
-    file: File,
-    options?: { contentType?: string; upsert?: boolean }
-  ): Promise<ApiResponse<StorageUploadResult>>;
-
-  /**
-   * Download a file
-   */
-  download(bucket: string, path: string): Promise<ApiResponse<Blob>>;
-
-  /**
-   * Get public URL for a file
-   */
-  getPublicUrl(bucket: string, path: string): string;
-
-  /**
-   * Get signed URL for private file
-   */
-  getSignedUrl(
-    bucket: string,
-    path: string,
-    expiresIn?: number
-  ): Promise<ApiResponse<string>>;
-
-  /**
-   * Delete a file
-   */
-  delete(bucket: string, paths: string[]): Promise<ApiResponse<null>>;
-
-  /**
-   * List files in a bucket/folder
-   */
-  list(
-    bucket: string,
-    folder?: string,
-    options?: { limit?: number; offset?: number }
-  ): Promise<ApiResponse<{ name: string; id: string }[]>>;
-}
-
-/**
- * Realtime service interface
- */
-export interface IRealtimeService {
-  /**
-   * Subscribe to table changes
-   */
-  subscribe<T = unknown>(
-    table: string,
-    event: RealtimeEventType,
-    callback: RealtimeCallback<T>,
-    filter?: { column: string; value: string }
-  ): RealtimeSubscription;
-
-  /**
-   * Create a channel for presence or broadcast
-   */
-  channel(name: string): IRealtimeChannel;
-}
-
-/**
- * Realtime channel interface
- */
-export interface IRealtimeChannel {
-  /**
-   * Subscribe to postgres changes
-   */
-  onPostgresChanges<T = unknown>(
-    table: string,
-    event: RealtimeEventType,
-    callback: RealtimeCallback<T>
-  ): this;
-
-  /**
-   * Subscribe to presence
-   */
-  onPresence(
-    event: 'sync' | 'join' | 'leave',
-    callback: (payload: unknown) => void
-  ): this;
-
-  /**
-   * Subscribe to broadcast
-   */
-  onBroadcast(event: string, callback: (payload: unknown) => void): this;
-
-  /**
-   * Track presence state
-   */
-  track(state: Record<string, unknown>): Promise<void>;
-
-  /**
-   * Send broadcast message
-   */
-  send(event: string, payload: unknown): Promise<void>;
-
-  /**
-   * Subscribe to channel
-   */
-  subscribe(callback?: (status: string) => void): this;
-
-  /**
-   * Unsubscribe from channel
-   */
-  unsubscribe(): void;
 }
 
 /**
@@ -259,6 +137,4 @@ export interface IRealtimeChannel {
 export interface IApiClient {
   data: IDataService;
   auth: IAuthService;
-  storage: IStorageService;
-  realtime: IRealtimeService;
 }

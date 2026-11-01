@@ -1,73 +1,30 @@
-# Welcome to your Lovable project
+# DiplomTrack frontend
 
-## Project info
+React 18 + TypeScript SPA (Vite, Tailwind, shadcn/ui, TanStack Query) for the DiplomTrack Flask API in [`../backend`](../backend).
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Run locally
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Start the backend first (see [docs/setup.md](../docs/setup.md)), then:
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+npm ci
+npm run dev        # http://localhost:8080, /api is proxied to http://localhost:5000
 ```
 
-**Edit a file directly in GitHub**
+| Script | Does |
+|---|---|
+| `npm run dev` | Dev server with the `/api` proxy |
+| `npm run build` | Production build in `dist/` (served by Nginx in Docker) |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | `tsc` without emitting |
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Configuration
 
-**Use GitHub Codespaces**
+| Variable | Default | Notes |
+|---|---|---|
+| `VITE_API_URL` | `/api` | Flask API base URL. Keep `/api` behind the Vite or Nginx proxy, or set a full URL for another origin |
+| `VITE_API_PROXY_TARGET` | `http://localhost:5000` | Development only: where the dev server forwards `/api` |
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Talking to the API
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Pages use the hooks in `src/hooks/api/`, which call the `api` client in `src/lib/api/`. Resource types are in `src/lib/api/models.ts`; keep them in sync with `backend/schemas/`. See [docs/architecture.md](../docs/architecture.md#api-layer) for how the layer is organised.

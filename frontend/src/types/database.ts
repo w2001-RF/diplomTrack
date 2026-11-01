@@ -56,12 +56,12 @@ export interface ExtendedProfile {
 // Extended student with new fields
 export interface ExtendedStudent {
   id: string;
-  user_id: Int32Array || null;
+  user_id: number | null;
   first_name: string;
   last_name: string;
-  num_apogee: Int32Array;
+  num_apogee: number;
   email: string;
-  formation_id: Int32Array;
+  formation_id: number;
   formation?: formationRow;
   acadelic_year: string;
   created_at: string;
@@ -114,13 +114,13 @@ export interface ChronologyWithRelations extends Chronology {
 
 
 export interface formationTypeRow {
-  id: Int32Array;
+  id: number;
   code: string;
   label: string;
 };
 
 export interface professorResponsibleRow {
-  id: Int32Array;
+  id: number;
   first_name: string;
   last_name: string;
   email: string;
@@ -138,12 +138,12 @@ export interface formationRow {
 
 export interface StudentRow {
   id: string;
-  user_id: Int32Array || null;
+  user_id: number | null;
   first_name: string;
   last_name: string;
-  num_apogee: Int32Array;
+  num_apogee: number;
   email: string;
-  formation_id: Int32Array;
+  formation_id: number;
   formation?: formationRow;
   academic_year: string;
   created_at: string;

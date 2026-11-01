@@ -1,12 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { Database } from '@/integrations/supabase/types';
+import type { StudentRow, StudentInsert, StudentUpdate } from '@/lib/api/models';
 import { toast } from 'sonner';
 import { CACHE_KEYS, defaultCacheConfig } from './useApiCache';
-
-type StudentRow = Database['public']['Tables']['students']['Row'];
-type StudentInsert = Database['public']['Tables']['students']['Insert'];
-type StudentUpdate = Database['public']['Tables']['students']['Update'];
 
 interface UseStudentsQueryOptions {
   enabled?: boolean;

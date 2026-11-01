@@ -31,11 +31,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import type { Database } from '@/integrations/supabase/types';
-
-type TicketStatus = Database['public']['Enums']['ticket_status'];
-type MilestoneHistoryRow = Database['public']['Tables']['ticket_milestone_history']['Row'];
-type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+import type { TicketStatus, MilestoneHistoryRow, ProfileRow } from '@/lib/api/models';
 
 interface AgentStats {
   agent_id: string;

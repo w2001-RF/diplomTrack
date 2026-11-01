@@ -1,13 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { Database } from '@/integrations/supabase/types';
+import type { DocumentRow, DocumentInsert, DocumentUpdate, DocumentStatus } from '@/lib/api/models';
 import { toast } from 'sonner';
 import { CACHE_KEYS, defaultCacheConfig } from './useApiCache';
-
-type DocumentRow = Database['public']['Tables']['documents']['Row'];
-type DocumentInsert = Database['public']['Tables']['documents']['Insert'];
-type DocumentUpdate = Database['public']['Tables']['documents']['Update'];
-type DocumentStatus = Database['public']['Enums']['document_status'];
 
 interface UseDocumentsQueryOptions {
   ticketId?: string;

@@ -41,16 +41,18 @@ python app.py                   # http://localhost:5000
 
 ```sh
 cd frontend
-npm install
+npm ci
 npm run dev                     # http://localhost:8080
 ```
 
-`.env.development` already points to the local API:
+Start the backend first. The dev server proxies `/api` to the Flask app, so the SPA uses the same `/api` URL as in production and no CORS setup is needed. `.env.development` sets:
 
 ```env
-VITE_API_BACKEND="rest"
-VITE_REST_API_URL="http://localhost:5000/api"
+VITE_API_URL="/api"
+VITE_API_PROXY_TARGET="http://localhost:5000"
 ```
+
+Other scripts: `npm run build`, `npm run lint`, `npm run typecheck`. The project uses npm only (`package-lock.json`); there is no Bun lockfile any more.
 
 ### Tests
 
@@ -112,9 +114,10 @@ These variables only matter the first time. If the admin account already exists,
 
 | Variable | Notes |
 |---|---|
-| `VITE_API_BACKEND` | `rest` (Flask) or `supabase` (legacy) |
-| `VITE_REST_API_URL` | `http://localhost:5000/api` in development, `/api` in production (same origin through Nginx) |
-| `VITE_SUPABASE_*` | Used only by the legacy Supabase adapter |
+| `VITE_API_URL` | Base URL of the Flask API. Default `/api` (proxied by Vite in development and by Nginx in production). Set a full URL such as `https://api.example.com/api` to call a backend on another origin, then add that origin to the backend's CORS list. `VITE_REST_API_URL` is still read as a fallback |
+| `VITE_API_PROXY_TARGET` | Development only: where `npm run dev` forwards `/api`. Default `http://localhost:5000` |
+
+`VITE_*` values are compiled into the bundle. Never put secrets in them.
 
 ## Runtime business settings
 
