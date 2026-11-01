@@ -44,6 +44,17 @@ Fixed in branch `test/frontend-suites`, found by the QA suite. `UserService.crea
 ### 10. ✅ Fixed: the signup validation test always failed
 Fixed in branch `test/frontend-suites`. `test_signup_missing_fields_returns_400` failed on `main` because the test app in `tests/conftest.py` had none of the JSON error handlers that `create_app()` registers, so the route's `ValidationError` escaped instead of becoming a 400. The handlers now live in `error_handlers.py` and both use them. The route itself was correct.
 
+### 11. ✅ Fixed: problems found by the QA run's server log
+Fixed in branch `fix/qa-findings`. The Robot suite passed, but the backend log showed:
+- **Lists never loaded in development.** Collections are declared as `/` under a `url_prefix`, so `GET /api/tickets` answered 308 → `/api/tickets/`. Behind the Vite proxy the redirect pointed at the API's own origin, and the browser followed it without the `Authorization` header (401). `register_routes()` now sets `strict_slashes = False`.
+- **The agent dashboard crashed once tickets did load.** The refactored adapter only unwrapped `{data}`/`{items}` envelopes, while the pages read `{tickets, total}`. `getMany` now unwraps any single-list envelope (`students`, `documents`…), and `useTicketsQuery` returns the typed `TicketListResponse` the pages use. The dashboard's empty state (`recentTickets.total === 0` on an array) never showed; fixed.
+- **A malformed token answered 422 with `msg`**, so the SPA did not treat it as a dead session. All token problems now answer 401 in the API's error format.
+- **A duplicate user answered 500** (`ValueError`). Admin user creation and signup now answer 409.
+- **Students' timelines compared `milestone.ordre`**, a field the API does not send (it sends `order`), so past and future steps were not told apart.
+- Stray `print(data)` in `POST /api/students`, and the `Query.get()` deprecation warning in `init_db.py`.
+
+Covered by `tests/test_api_contract.py`, `tests/test_admin_users.py`, `tests/test_auth_routes.py`, `src/test/integration/lists.integration.test.tsx` and the Robot test *Agent Sees Records Created Through The API*.
+
 ## Incomplete features
 
 - ✅ **Fixed: emails were never triggered.** Fixed in branch `fix/email-notifications`. All three emails are now sent (see [architecture.md](architecture.md#cross-cutting-concerns)), and the template links point to real SPA routes (`/dossier/<id>`, `/dossiers`, `/admin`). Existing databases keep their old template copies in `app_config`, so re-save the templates in **Admin → Settings** to pick up the corrected links. Still open: `email_check_interval_hours` is not used, and the delay check stays hourly.
@@ -73,6 +84,7 @@ Fixed in branch `test/frontend-suites`. `test_signup_missing_fields_returns_400`
 - Runtime data is mixed into the source tree: `postgres/`, `minio/`, `backend/logs/`, `backend/data/*.db`, `backend/uploads/`, `.venv/`, `.pytest_cache/`. The repo root is not a git repository (only `frontend/` is). When you initialize one, add a `.gitignore` that excludes these paths and `.env`.
 - ✅ **Fixed: Lovable and Supabase leftovers.** Removed in branch `refactor/frontend-python-backend`, together with `lovable-tagger`, `@supabase/supabase-js`, the Bun lockfile and the unused mock pages. See [architecture.md](architecture.md#api-layer) for the resulting API layer.
 - **The frontend does not pass a full typecheck.** `npm run typecheck` reports about 155 errors, all older than the refactor: they were hidden because `src/types/database.ts` had syntax errors that stopped `tsc` early, and Vite builds without type-checking. Most come from the pages using fields the types don't declare (for example `student.formation`, `milestone.order`, the `{tickets, total}` shape of the paginated ticket list) and from status-label maps that miss some milestone codes. Fix them page by page, starting with `TicketDetail.tsx` (65 errors). `npm run lint` reports 51 older problems.
+- **`GET /api/tickets` returns 10 tickets by default** (`length` query parameter), and the frontend never sends `length` or pages through results. The dashboards and the dossier list therefore show at most 10 dossiers, while `total` counts all of them.
 - **The role-change dialog in `AdminUsers` is unreachable.** `handleUpdateRole` and its dialog exist, but nothing calls `setDialogOpen(true)`, so admins have no button to change a role.
 - **`init_db.py` crashes on Windows when its output is piped** (emoji in `print` under the cp1252 console encoding). Set `PYTHONUTF8=1`; `run_qa.py` does.
 - **Test coverage gaps.** The backend suite covers auth, notifications, scheduling, emails and admin user creation; the frontend suites cover the API layer, routing, login and notifications (see [testing.md](testing.md)). The workflow engine (`update_status` and its validators) and the ticket pages are the most valuable things to test next.

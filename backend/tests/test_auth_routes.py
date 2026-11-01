@@ -197,3 +197,24 @@ def test_signup_missing_fields_returns_400(client, monkeypatch):
 #     assert data["message"] == "Password updated"
 #     assert called["ok"] is True
 #     assert called["password"] == "newpass123"
+
+
+def test_signup_existing_account_returns_409(client, monkeypatch):
+    # Uses the real AuthService against a database that already has the user
+    from extensions import db
+    from models import User
+
+    app = client.application
+    db.init_app(app)
+    with app.app_context():
+        db.create_all()
+        db.session.add(User(username="wassim", email="wassim@uit.ac.ma", password_hash="x", role="STUDENT"))
+        db.session.commit()
+
+        res = client.post("/api/auth/signup", json={
+            "username": "wassim", "email": "wassim@uit.ac.ma", "password": "Secret-123",
+        })
+
+        assert res.status_code == 409
+        assert res.get_json()["error"] == "User already exists"
+        db.drop_all()

@@ -330,8 +330,8 @@ export default function MyDossier() {
                         <div className="relative">
                           {milestones.map((milestone, index) => {
                             const isCurrent = milestone.code === ticket.status;
-                            const isPast = currentMilestone ? milestone.ordre < currentMilestone.ordre : false;
-                            const isFuture = currentMilestone ? milestone.ordre > currentMilestone.ordre : true;
+                            const isPast = currentMilestone ? milestone.order < currentMilestone.order : false;
+                            const isFuture = currentMilestone ? milestone.order > currentMilestone.order : true;
 
                             return (
                               <div key={milestone.id} className="flex gap-4 pb-4 last:pb-0">

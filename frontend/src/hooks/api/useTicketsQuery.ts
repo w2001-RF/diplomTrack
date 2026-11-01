@@ -10,6 +10,17 @@ export interface TicketWithStudent extends TicketRow {
   initial_milestone_code?: String | null;
 }
 
+/** GET /api/tickets (get_tickets in backend/routes/ticket_routes.py) */
+export interface TicketListResponse {
+  tickets: TicketWithStudent[];
+  total: number;
+  pages: number;
+  page: number;
+  length: number;
+}
+
+const EMPTY_TICKET_LIST: TicketListResponse = { tickets: [], total: 0, pages: 0, page: 1, length: 0 };
+
 interface UseTicketsQueryOptions {
   withStudent?: boolean;
   enabled?: boolean;
@@ -25,13 +36,14 @@ export function useTicketsQuery(options: UseTicketsQueryOptions = {}) {
   // Main query for fetching tickets
   const ticketsQuery = useQuery({
     queryKey: [CACHE_KEYS.TICKETS],
-    queryFn: async (user_id: string | null): Promise<TicketWithStudent[]> => {
-      const { data, error } = await api.data.getMany<TicketWithStudent>('tickets', {
-        sort: [{ field: 'created_at', direction: 'desc' }]
+    queryFn: async (): Promise<TicketListResponse> => {
+      // The pages read the envelope (tickets + total), so keep it whole
+      const { data, error } = await api.data.customRequest<TicketListResponse>('tickets', {
+        query: { sort: [{ field: 'created_at', direction: 'desc' }] }
       });
 
       if (error) throw new Error(error.message);
-      return data || [];
+      return data ?? EMPTY_TICKET_LIST;
     },
     enabled,
     staleTime: defaultCacheConfig.staleTime,
@@ -160,7 +172,7 @@ export function useTicketsQuery(options: UseTicketsQueryOptions = {}) {
 
   return {
     // Query state
-    tickets: ticketsQuery.data || [],
+    tickets: ticketsQuery.data ?? EMPTY_TICKET_LIST,
     loading: ticketsQuery.isLoading,
     error: ticketsQuery.error?.message || null,
     isRefetching: ticketsQuery.isRefetching,

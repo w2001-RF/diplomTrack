@@ -20,3 +20,5 @@ ${NEW_AGENT_EMAIL}      qa.newagent@uit.ac.ma
 ${NEW_AGENT_PASSWORD}   QaTemp-2026!
 ${STUDENT_EMAIL}        qa.student@uit.ac.ma
 ${STUDENT_PASSWORD}     QaStudent-2026!
+# Student record (not an account) created by an agent, to check lists load
+${LISTED_STUDENT_LAST_NAME}     QaListe

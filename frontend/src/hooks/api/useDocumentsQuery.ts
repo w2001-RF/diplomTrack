@@ -28,7 +28,7 @@ export function useDocumentsQuery(options: UseDocumentsQueryOptions = {}) {
       });
 
       if (error) throw new Error(error.message);
-      return data?.documents || data || [];
+      return data || [];
     },
     enabled: enabled && !!ticketId,
     staleTime: defaultCacheConfig.staleTime,

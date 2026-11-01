@@ -1,7 +1,7 @@
 // Export all API hooks
 
 // React Query hooks (with caching)
-export { useTicketsQuery, useTicketQuery, type TicketWithStudent } from './useTicketsQuery';
+export { useTicketsQuery, useTicketQuery, type TicketWithStudent, type TicketListResponse } from './useTicketsQuery';
 export { useStudentsQuery, useStudentQuery, useStudentByUserQuery } from './useStudentsQuery';
 export { useDocumentsQuery } from './useDocumentsQuery';
 export { useMilestonesQuery, useMilestoneHistoryQuery, type MilestoneHistoryWithDetails } from './useMilestonesQuery';

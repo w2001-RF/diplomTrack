@@ -8,6 +8,7 @@ from extensions import db
 from utils.security import verify_password, hash_password
 from services.audit_service import AuditService
 from services.student_service import StudentService
+from exceptions import ConflictError
 
 
 class AuthService:
@@ -47,7 +48,7 @@ class AuthService:
             (User.username == username) |
             (User.email == email)
         ).first():
-            raise ValueError("User already exists")
+            raise ConflictError("User already exists")
 
         user = User(
             username=username,

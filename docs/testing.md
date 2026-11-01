@@ -35,6 +35,7 @@ npm run test:coverage    # text summary + coverage/index.html
 | `src/components/routing.test.tsx` | component | `RootRedirect` and `ProtectedRoute` for each role, loading state and forced password reset |
 | `src/constants/roles.test.ts` | unit | Role values match the backend's validation |
 | `src/test/integration/auth.integration.test.tsx` | integration | The real login page, `AuthProvider` and router: login per role, wrong password, form validation, session restore, expired JWT logs out |
+| `src/test/integration/lists.integration.test.tsx` | integration | List envelopes (`{tickets, total}`, `{students, total}`) as the hooks and the agent dashboard read them, including the empty state |
 | `src/test/integration/notifications.integration.test.tsx` | integration | `useNotificationsQuery` and `NotificationsMenu` against the notification routes: unread count from `is_read`, `PATCH /<id>/read`, `/read-all`, link to `/dossier/<id>` |
 
 ### How the fake API works
@@ -81,6 +82,8 @@ python frontend/qa/run_qa.py --include smoke       # any extra option goes to ro
 2. Starts Flask on port 5055 (scheduler off) and the Vite dev server on port 8095, proxying `/api` to it.
 3. Runs `robot`, then stops both servers and deletes the database.
 
+The servers' output goes to `frontend/qa/results/backend.log` and `frontend.log`, not the console. Read `backend.log` after a run: a passing suite can still hide redirects, 4xx/5xx answers or warnings (that is how the issues in [known-issues.md](known-issues.md#11--fixed-problems-found-by-the-qa-runs-server-log) were found). If port 5055 or 8095 is already taken, for example by a second run, the script stops instead of testing the other server; use `--api-port`/`--web-port` to run side by side.
+
 To test a stack that is already running (for example `docker compose up` on a fresh database), pass `--base-url http://localhost --api-url http://localhost/api`, plus a matching `--variable ADMIN_PASSWORD:...` when `ADMIN_PASSWORD` is not `QaAdmin-2026!`.
 
 ### Suites
@@ -90,7 +93,7 @@ To test a stack that is already running (for example `docker compose up` on a fr
 | `tests/__init__.robot` | | Seeds accounts through the API: activates the admin, creates an agent, a first-login agent and a student |
 | `01_authentication.robot` | `auth`, `smoke` | Login page, backend error for a wrong password, client-side validation, login/logout, session after reload, tampered token |
 | `02_first_login.robot` | `first-login` | An admin-created agent must change their password; the new one works and the old one doesn't |
-| `03_access_control.robot` | `access-control`, `smoke` | Anonymous redirects, each role's home page, students and agents kept out of pages they can't use, 404 page |
+| `03_access_control.robot` | `access-control`, `smoke`, `lists` | Anonymous redirects, each role's home page, students and agents kept out of pages they can't use, a record created through the API shows up in the agent's list, 404 page |
 | `04_admin_and_notifications.robot` | `admin`, `notifications` | Admin user list with role badges, user search, notification menu |
 
 Keywords live in `qa/resources/`: `app.resource` (browser actions such as `Log In As`), `api.resource` (seeding), `variables.resource` (URLs, accounts, timeouts). The first-login suite consumes the first-login state, so the suite expects a fresh database each run; `run_qa.py` provides one.

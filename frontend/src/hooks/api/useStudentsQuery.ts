@@ -24,7 +24,7 @@ export function useStudentsQuery(options: UseStudentsQueryOptions = {}) {
       });
 
       if (error) throw new Error(error.message);
-      return data?.students?.map(s => ({ ...s })) || [];
+      return data || [];
     },
     enabled,
     staleTime: defaultCacheConfig.staleTime,
