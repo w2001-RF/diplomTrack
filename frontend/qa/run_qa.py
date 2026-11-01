@@ -89,6 +89,9 @@ def start_stack(args, workdir, logs_dir):
         "ADMIN_PASSWORD": ADMIN_PASSWORD,
         "ENABLE_SCHEDULER": "false",
         "USE_MINIO": "false",
+        # Uploaded files stay in the throwaway work folder, not backend/uploads
+        "UPLOAD_FOLDER": str(workdir / "profiles"),
+        "DOCUMENT_UPLOAD_FOLDER": str(workdir / "documents"),
         "MAIL_SUPPRESS_SEND": "true",
         # init_db.py prints emoji; Windows' default cp1252 crashes on them when piped
         "PYTHONUTF8": "1",

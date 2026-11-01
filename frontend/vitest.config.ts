@@ -21,6 +21,8 @@ export default defineConfig({
     restoreMocks: true,
     // vi.stubGlobal (e.g. fetch) must not leak into the next test
     unstubGlobals: true,
+    // Page tests click through Radix dialogs and selects; under coverage on a busy CI runner they need more than 5 s
+    testTimeout: 15_000,
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],

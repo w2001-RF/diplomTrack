@@ -79,6 +79,7 @@ services:
       MAIL_DEFAULT_SENDER: ${MAIL_DEFAULT_SENDER}
       
       UPLOAD_FOLDER: uploads/profiles
+      DOCUMENT_UPLOAD_FOLDER: uploads/documents
 
     volumes:
       - ./backend/logs:/app/logs

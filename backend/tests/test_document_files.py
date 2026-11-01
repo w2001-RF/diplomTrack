@@ -113,3 +113,44 @@ def test_the_file_path_cannot_escape_the_upload_folder(seeded):
     created = seeded.post("/api/documents", json={"ticket_id": tid, "document_type": "BAC", "file_path": "../../app.py"})
 
     assert seeded.get(f"/api/documents/{created.get_json()['id']}/file").status_code == 404
+
+
+class FakeMinio:
+    """The slice of minio.Minio that document_storage uses, kept in memory."""
+
+    def __init__(self):
+        self.buckets, self.objects = set(), {}
+
+    def bucket_exists(self, bucket):
+        return bucket in self.buckets
+
+    def make_bucket(self, bucket):
+        self.buckets.add(bucket)
+
+    def put_object(self, bucket, name, data, length, content_type=None):
+        self.objects[(bucket, name)] = data.read(length)
+
+    def get_object(self, bucket, name):
+        return io.BytesIO(self.objects[(bucket, name)])
+
+    def remove_object(self, bucket, name):
+        del self.objects[(bucket, name)]
+
+
+def test_files_go_to_minio_when_it_is_enabled(seeded, monkeypatch):
+    # USE_MINIO is the Docker default
+    fake = FakeMinio()
+    monkeypatch.setattr("utils.minio_client.get_minio_client", lambda: fake)
+    current_app.config.update(USE_MINIO=True, MINIO_BUCKET="uploads")
+    tid = seeded.create_ticket()["id"]
+
+    first = upload(seeded, tid, content=b"%PDF old").get_json()
+    second = upload(seeded, tid, content=b"%PDF new", filename="cin-v2.pdf").get_json()
+
+    assert stored_files() == []  # nothing on local disk
+    assert list(fake.objects) == [("uploads", f"documents/{second['file_path']}")]
+    assert first["file_path"] != second["file_path"]
+    assert seeded.get(f"/api/documents/{second['id']}/file").data == b"%PDF new"
+
+    assert seeded.delete(f"/api/documents/{second['id']}").status_code == 200
+    assert fake.objects == {}

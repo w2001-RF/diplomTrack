@@ -70,6 +70,16 @@ Current Milestone Should Be
     [Arguments]    ${label}
     Wait Until Element Contains    css:button[role="combobox"]    ${label}
 
+Upload Document File
+    [Documentation]    Uploads a scanned file for one document through the dossier page's dialog.
+    [Arguments]    ${document_type}    ${path}=${SCAN_FILE}
+    Click Button    css:button[aria-label="Téléverser ${document_type}"]
+    Wait Until Element Is Visible    xpath://div[@role="dialog"]
+    Choose File    id:document-file    ${path}
+    Click Button    xpath://div[@role="dialog"]//button[normalize-space()="Téléverser"]
+    Wait Until Element Is Not Visible    xpath://div[@role="dialog"]
+    Wait Until Page Contains Element    css:button[aria-label="Voir ${document_type}"]
+
 Validate Every Pending Document
     [Documentation]    Clicks "Valider" on each document until none is left, confirming each dialog.
     ${remaining}=    Get Element Count    xpath://button[normalize-space()="Valider"]

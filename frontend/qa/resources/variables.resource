@@ -27,3 +27,4 @@ ${LISTED_STUDENT_LAST_NAME}     QaListe
 # Student record linked to the qa.student account, followed through a whole dossier lifecycle
 ${LIFECYCLE_FIRST_NAME}         Karim
 ${LIFECYCLE_LAST_NAME}          Parcours
+${SCAN_FILE}           ${CURDIR}${/}files${/}scan.pdf

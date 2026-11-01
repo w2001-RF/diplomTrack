@@ -95,12 +95,9 @@ jobs:
             frontend/coverage/
 
   static-checks:
-    name: Lint and typecheck (report only)
+    name: Lint and typecheck
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Both have known errors from before the test suites (docs/known-issues.md).
-    # They are reported but do not fail the pipeline until that debt is paid.
-    continue-on-error: true
     defaults:
       run:
         working-directory: frontend

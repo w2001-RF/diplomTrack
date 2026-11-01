@@ -23,6 +23,7 @@ pytest tests/test_ticket_lifecycle.py -k attestation   # one area while you work
 | `test_students_api.py` | Student CRUD, bulk creation, filters, paging, per-role access |
 | `test_users_api.py` | Login, session, signup, password change, profile image, admin user management, bulk agents |
 | `test_documents_api.py` | Upload, validate/invalidate, status, missing documents, 404s, permissions |
+| `test_document_files.py` | Scanned files: multipart upload, download, replacement and deletion of the stored file, allowed types, a student only downloading their own, path traversal, MinIO storage (fake client) |
 | `test_data_api.py` | Milestones, formations, profiles (ownership), user roles, history, app settings, email test |
 | `test_api_contract.py` | HTTP rules the SPA relies on: no trailing-slash redirects, 401 for every token problem |
 | `test_app_factory.py` | `create_app()` wiring: blueprints, JSON 404, CORS preflight |
@@ -61,6 +62,7 @@ npm run test:coverage    # text summary + coverage/index.html
 | `src/test/integration/hooks.integration.test.tsx` | integration | Every data hook's requests (method, path, body) against handlers that mirror the Flask routes: documents, milestones and history, settings, profiles (PUT), students, tickets, bulk agents, formations |
 | `src/test/integration/pages.integration.test.tsx` | integration | `TicketDetail` (milestone select, refused transition, document validation), `MyDossier`, `CreateTicket`, `NotFound` |
 | `src/test/integration/morePages.integration.test.tsx` | integration | `AdminDashboard`, `AdminSettings`, both notification pages, `AgentStudents`, `Profile` (failed and successful password change) |
+| `src/test/integration/forms.integration.test.tsx` | integration | `StudentForm`, `EmailTemplateEditor`, `CreateAdvancedTicket` (both workflows), the dossier page's document upload and file viewer, `MyDossier`'s contact form, search on nested fields in `AgentTickets` |
 | `src/test/integration/adminUsers.integration.test.tsx` | integration | User list, role badges, promoting a student through the role dialog |
 | `src/App.test.tsx` | integration | The real route table: login page, anonymous redirect, role home page, 404 |
 | `src/lib/api/pagination.test.ts`, `src/lib/tickets.test.ts`, `src/data/formations.test.ts` | unit | Helpers |
@@ -123,9 +125,9 @@ To test a stack that is already running (for example `docker compose up` on a fr
 | `02_first_login.robot` | `first-login` | An admin-created agent must change their password; the new one works and the old one doesn't |
 | `03_access_control.robot` | `access-control`, `smoke`, `lists` | Anonymous redirects, each role's home page, students and agents kept out of pages they can't use, a record created through the API shows up in the agent's list, 404 page |
 | `04_admin_and_notifications.robot` | `admin`, `notifications` | Admin user list with role badges, user search, promoting a student to agent, notification menu |
-| `05_ticket_lifecycle.robot` | `lifecycle` | One dossier end to end: the agent creates it, starts processing, is refused completion while documents lack files, validates the scanned documents, moves it to closure; it shows as closed in the list; the student sees it closed and gets the "Dossier complet" notification |
+| `05_ticket_lifecycle.robot` | `lifecycle` | One dossier end to end: the agent creates it, starts processing, is refused completion while documents lack files, uploads a scanned PDF for each missing document through the dossier page, validates them, moves it to closure; it shows as closed in the list; the student sees it closed and gets the "Dossier complet" notification |
 
-Keywords live in `qa/resources/`: `app.resource` (browser actions such as `Log In As`, `Change Milestone To`, `Validate Every Pending Document`), `api.resource` (seeding, and `Attach Scanned Documents Through API` because the SPA has no file upload for dossier documents yet), `variables.resource` (URLs, accounts, timeouts). SeleniumLibrary runs with a 5-second implicit wait, so element lookups wait for the SPA to render. The first-login suite consumes the first-login state, so the suite expects a fresh database each run; `run_qa.py` provides one.
+Keywords live in `qa/resources/`: `app.resource` (browser actions such as `Log In As`, `Change Milestone To`, `Validate Every Pending Document`), `api.resource` (seeding, and `Missing Documents Through API` to know which documents to upload), `files/scan.pdf` (the file uploaded by `Upload Document File`), `variables.resource` (URLs, accounts, timeouts). SeleniumLibrary runs with a 5-second implicit wait, so element lookups wait for the SPA to render. The first-login suite consumes the first-login state, so the suite expects a fresh database each run; `run_qa.py` provides one.
 
 ### Writing a new QA test
 
@@ -139,9 +141,9 @@ Line coverage on 2026-11-01 (application code only):
 
 | Layer | Tests | Coverage | Lowest |
 |---|---|---|---|
-| Backend | 127 | 80 % | `ticket_service.py`, `email_service.py`, `document_routes.py` |
-| Frontend | 121 | 72 % (shadcn/ui primitives excluded) | `StudentForm`, `EmailTemplateEditor`, `CreateAdvancedTicket` |
-| QA (Robot) | 27 | every role's main journeys, including a dossier's whole lifecycle | |
+| Backend | 138 | 80 % | `ticket_service.py`, `email_service.py`, `document_routes.py` |
+| Frontend | 135 | 82 % (shadcn/ui primitives excluded) | `ImportStudentsDialog`, `AuthProvider`, `FirstLoginPasswordResetModal` |
+| QA (Robot) | 28 | every role's main journeys, including a dossier's whole lifecycle with file upload | |
 
 Coverage is a map of what nothing exercises, not a goal: prefer a test that pins down a behaviour (like the lifecycle tests) over one written to light up lines.
 
@@ -153,7 +155,7 @@ Coverage is a map of what nothing exercises, not a goal: prefer a test that pins
 flowchart LR
     push["push / PR"] --> B["Backend<br/>pytest"]
     push --> F["Frontend<br/>Vitest + build"]
-    push --> S["Lint + typecheck<br/>report only"]
+    push --> S["Lint + typecheck"]
     B --> E["End-to-end<br/>Robot Framework"]
     F --> E
 ```
@@ -162,12 +164,12 @@ flowchart LR
 |---|---|---|---|
 | Backend | yes | `pytest --cov`, failures annotated on the changed lines | `backend-test-results` (JUnit + `coverage.xml`) |
 | Frontend | yes | `npm run test:coverage`, then `npm run build` | `frontend-test-results` (JUnit + coverage HTML) |
-| Lint and typecheck | no | `npm run lint`, `npm run typecheck` | |
+| Lint and typecheck | yes | `npm run lint`, `npm run typecheck` | |
 | End-to-end | yes | `python frontend/qa/run_qa.py --browser chrome`, only after the two test jobs pass | `robot-reports` (report, log, failure screenshots) |
 
-Lint and typecheck are report-only because the frontend still carries older errors (see [known-issues.md](known-issues.md)). Once they are fixed, remove `continue-on-error: true` from the `static-checks` job so they block too.
+Lint and typecheck have no known errors and fail the pipeline on any new one. Vite builds without type-checking, so `npm run typecheck` is the only thing that catches a page reading a field the API does not send.
 
-To make the checks required, go to **Settings → Branches → Branch protection rule** for `main` and require the `Backend (pytest)`, `Frontend (Vitest)` and `End-to-end QA (Robot Framework)` status checks.
+To make the checks required, go to **Settings → Branches → Branch protection rule** for `main` and require the `Backend (pytest)`, `Frontend (Vitest)`, `Lint and typecheck` and `End-to-end QA (Robot Framework)` status checks.
 
 ## Test-driven workflow
 

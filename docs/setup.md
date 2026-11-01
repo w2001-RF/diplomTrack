@@ -105,6 +105,7 @@ These variables only matter the first time. If the admin account already exists,
 | `MAIL_SERVER` / `MAIL_PORT` | `smtp.gmail.com` / `465` | |
 | `MAIL_USE_TLS` / `MAIL_USE_SSL` | `true` / `false` | Compose sets SSL on port 465 |
 | `UPLOAD_FOLDER` | `uploads/profiles` | Local avatar folder |
+| `DOCUMENT_UPLOAD_FOLDER` | `uploads/documents` | Local folder for scanned dossier documents (with `USE_MINIO=true` they go to the bucket under `documents/`) |
 | `ENABLE_SCHEDULER` | `true` | `false` disables the background jobs (useful for tests or extra API replicas) |
 | `SCHEDULER_LOCK_FILE` | `<system temp>/diplomtrack-scheduler.lock` | Lock file that elects the single process that runs the scheduler |
 | `FRONTEND_URL` | `http://localhost` | Base URL used for links in emails |

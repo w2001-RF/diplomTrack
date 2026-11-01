@@ -92,10 +92,11 @@ Authorization: Bearer <token>
 |---|---|---|---|
 | GET | `/` | — | List with filters, sorting and pagination (`DocumentQueryBuilder`) |
 | GET | `/<id>` | AGENT, ADMIN, STUDENT | Get one |
-| POST | `/` | AGENT, ADMIN | Attach or replace a file reference: `{ticket_id, document_type, file_path}` |
+| POST | `/` | AGENT, ADMIN | Upload or replace a document's file. `multipart/form-data` with `ticket_id`, `document_type` and `file` (PDF, PNG or JPG, 10 MB max); or JSON `{ticket_id, document_type, file_path}` to record a file stored elsewhere. Replacing a file resets its validation and deletes the old stored file |
+| GET | `/<id>/file` | AGENT, ADMIN, STUDENT | The stored file (a student only gets files of their own ticket). 404 when the document has no stored file |
 | PATCH | `/<id>/validate` | AGENT, ADMIN | Validate (may advance the workflow) |
 | PATCH | `/<id>/invalidate` | AGENT, ADMIN | Invalidate. `comment` (the reason, sent to the student) is **required**. May trigger the correction loop |
-| DELETE | `/<id>` | ADMIN, AGENT | Delete |
+| DELETE | `/<id>` | ADMIN, AGENT | Delete, with its stored file |
 | GET | `/ticket/<ticket_id>/status` | AGENT, ADMIN, STUDENT | Per-document status for a ticket |
 | GET | `/ticket/<ticket_id>/missing` | AGENT, ADMIN, STUDENT | Missing or unvalidated documents |
 | GET | `/types` | — | Allowed document types and labels |

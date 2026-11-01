@@ -22,7 +22,7 @@ It was built for the Université Ibn Tofail (`uit.ac.ma`) and covers two kinds o
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui (Radix), TanStack Query, React Router, Recharts, `xlsx` for Excel import |
 | Backend | Python 3.13, Flask 3, Flask-SQLAlchemy, Flask-JWT-Extended, Marshmallow, Flask-Mail, APScheduler, Gunicorn |
 | Database | PostgreSQL 16 (Docker) or SQLite (local development) |
-| File storage | MinIO (S3-compatible, used for profile images) or the local `uploads/` folder |
+| File storage | MinIO (S3-compatible, for profile images and scanned dossier documents) or the local `uploads/` folder |
 | Serving | Nginx serves the built SPA and proxies `/api/*` to the backend |
 | Orchestration | Docker Compose |
 

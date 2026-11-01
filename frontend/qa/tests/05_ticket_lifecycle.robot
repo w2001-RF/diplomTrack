@@ -39,8 +39,17 @@ Dossier Cannot Be Complete Before Its Documents
     Reload Page
     Current Milestone Should Be    Dossier en cours
 
+Agent Uploads The Scanned Documents
+    @{missing}=    Missing Documents Through API    ${TICKET_ID}
+    Should Not Be Empty    ${missing}
+    Go To    ${TICKET_URL}
+    FOR    ${document_type}    IN    @{missing}
+        Upload Document File    ${document_type}
+    END
+    # Files are stored under a generated name: ticket_<id>_<type>_<random>.pdf
+    Page Should Contain    ticket_${TICKET_ID}_
+
 Agent Validates The Scanned Documents
-    Attach Scanned Documents Through API    ${TICKET_ID}
     Go To    ${TICKET_URL}
     Wait Until Page Contains Element    xpath://button[normalize-space()="Valider"]
     Validate Every Pending Document

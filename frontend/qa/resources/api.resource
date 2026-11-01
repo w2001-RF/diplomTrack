@@ -54,19 +54,13 @@ Current User Id
     ${session}=    GET On Session    api    /auth/session    headers=${headers}    expected_status=200
     RETURN    ${{ int($session.json()['user']['id']) }}
 
-Attach Scanned Documents Through API
-    [Documentation]    Gives every required document of a ticket a file. The SPA has no file
-    ...                upload for dossier documents yet (docs/known-issues.md), so this is the
-    ...                one lifecycle step done through the API. Attaching resets validation.
+Missing Documents Through API
+    [Documentation]    Document types of a ticket that still lack a validated file.
     [Arguments]    ${ticket_id}
     ${token}=    Log In Through API    ${AGENT_EMAIL}    ${AGENT_PASSWORD}
     ${headers}=    Create Dictionary    Authorization=Bearer ${token}
     ${missing}=    GET On Session    api    /documents/ticket/${ticket_id}/missing    headers=${headers}
-    FOR    ${doc_type}    IN    @{missing.json()}[missing_documents]
-        ${body}=    Create Dictionary    ticket_id=${{ int(${ticket_id}) }}    document_type=${doc_type}
-        ...    file_path=/uploads/qa/${doc_type}.pdf
-        POST On Session    api    /documents    json=${body}    headers=${headers}    expected_status=201
-    END
+    RETURN    ${missing.json()}[missing_documents]
 
 Create User Through API
     [Arguments]    ${token}    ${username}    ${email}    ${password}    ${role}
