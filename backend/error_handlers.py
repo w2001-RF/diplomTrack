@@ -106,3 +106,28 @@ def register_error_handlers(app):
             payload["trace"] = traceback.format_exc()
 
         return jsonify(payload), status_code
+
+
+
+def _unauthorized(message):
+    return jsonify({"error": message, "code": 401, "status": 401}), 401
+
+
+def register_jwt_handlers(jwt_manager):
+    """Answer every token problem with a 401 in the API's error format.
+
+    Flask-JWT-Extended answers a malformed token with 422 and uses a `msg`
+    field. The SPA logs the user out on 401, so all of these must be 401.
+    """
+
+    @jwt_manager.unauthorized_loader
+    def missing_token(reason):
+        return _unauthorized("Authentification requise")
+
+    @jwt_manager.invalid_token_loader
+    def invalid_token(reason):
+        return _unauthorized("Jeton d'authentification invalide")
+
+    @jwt_manager.expired_token_loader
+    def expired_token(jwt_header, jwt_payload):
+        return _unauthorized("Session expirée, veuillez vous reconnecter")

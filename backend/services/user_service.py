@@ -8,6 +8,7 @@ import uuid
 from werkzeug.utils import secure_filename
 from flask import current_app
 from io import BytesIO
+from exceptions import ConflictError
 
 # =========================================================
 # Helper
@@ -45,7 +46,7 @@ class UserService:
             (User.username == username) |
             (User.email == email)
         ).first():
-            raise ValueError("User already exists")
+            raise ConflictError("User already exists")
 
         user = User(
             username=username,

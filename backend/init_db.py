@@ -189,7 +189,7 @@ def seed_app_config():
     """
     print("⚙️ Seeding app configuration...")
     
-    config = AppConfig.query.get(1)
+    config = db.session.get(AppConfig, 1)
     if config:
         print("ℹ️ App config already exists")
         return

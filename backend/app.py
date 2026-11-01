@@ -6,7 +6,7 @@ from config import Config
 from extensions import db, jwt, mail
 from models import *
 from routes import register_routes
-from error_handlers import register_error_handlers
+from error_handlers import register_error_handlers, register_jwt_handlers
 from tasks.scheduler import init_scheduler
 
 def create_app():
@@ -44,6 +44,7 @@ def create_app():
             return '', 204
 
     register_error_handlers(app)
+    register_jwt_handlers(jwt)
 
     with app.app_context():
         db.create_all()

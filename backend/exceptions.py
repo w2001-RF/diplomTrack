@@ -25,3 +25,8 @@ class NotFoundError(APIException):
     """Not Found Error Exception"""
     def __init__(self, message, error_code=4041):
         super().__init__(message, status_code=404, error_code=error_code)
+
+class ConflictError(APIException):
+    """The resource already exists (e.g. a duplicate username or email)"""
+    def __init__(self, message, error_code=4091):
+        super().__init__(message, status_code=409, error_code=error_code)

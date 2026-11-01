@@ -119,7 +119,7 @@ def get_student(student_id):
 @jwt_required()
 @require_roles("ADMIN", "AGENT")
 def create_student():
-    data = create_schema.load(request.json);print(data)
+    data = create_schema.load(request.json)
     performed_by = get_jwt()["user_id"]
 
     student = StudentService.create_student(data, performed_by=performed_by)
