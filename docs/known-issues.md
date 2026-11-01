@@ -25,6 +25,7 @@ Fixed in branch `fix/minio-dependency`. `utils/minio_client.py` imports `minio`,
 It returns `self.document_type.value`, but `document_type` is a plain string column. It is not called today because routes use Marshmallow schemas, but any future caller would get an `AttributeError`.
 
 ### 7. Ticket status values are inconsistent
+The frontend no longer depends on it (it reads `current_milestone.code`, see #12), but the backend vocabulary is still inconsistent:
 The model comment documents `OPEN | BLOCKED | IN_PROGRESS | COMPLETED`, but the workflow writes `PENDING`. `BLOCKED` is never set, even though there is a "ticket blocked" email template. Pick one vocabulary and use it in the backend, the frontend filters and the notification queries.
 
 ### 8. ✅ Fixed: frontend calls that did not match the Flask API
@@ -55,10 +56,25 @@ Fixed in branch `fix/qa-findings`. The Robot suite passed, but the backend log s
 
 Covered by `tests/test_api_contract.py`, `tests/test_admin_users.py`, `tests/test_auth_routes.py`, `src/test/integration/lists.integration.test.tsx` and the Robot test *Agent Sees Records Created Through The API*.
 
+### 12. ✅ Fixed: problems found while extending the test suites
+Fixed in branch `fix/open-issues`. Each has a test that failed first.
+- **Security: any account could edit any profile.** `PUT /api/profiles/<id>` had no ownership check, so a student could change an admin's email. It is now owner-or-admin, and it finally saves `phone_number` (it looked for a `phone` attribute that does not exist).
+- **Security: a student's own-record check used the wrong id.** `GET /api/students/<id>` compared against the student whose *id* equals the user id, so students were refused their own record and could read another one.
+- **Students were never notified.** The workflow's student-facing messages ("Votre dossier est complet"…) went to `ticket.user_id`, the agent who created the ticket. They now go to the student's account.
+- **Ticket statuses were read from the wrong field.** The dossier list, the student's page and the admin dashboard used `ticket.status` (OPEN/PENDING/COMPLETED) as a milestone code, so status badges were blank, the student's timeline was wrong and "closed"/"blocked" counts were 0. They now use `current_milestone.code`. The student page also never found its own record (it read the old `{students: […]}` shape).
+- **Lists stopped at 10 items.** Tickets and students are paged by the API; the hooks now fetch every page.
+- **Errors reported as 500:** refused workflow transitions, Marshmallow schema errors, signup without a student record, unknown documents (a broad `except Exception` swallowed the 404). They now answer 400/404.
+- **Rejecting a document dropped the reason** (the hook passed `reason`, the mutation read `comment`), and the API accepted an empty one. The reason is sent and required.
+- **Deleting a profile picture always failed** (`delete_profile_image` was a copy of the upload and used an undefined `file`).
+- **Students could not update their contact details** (`useUpdateProfile` sent PATCH; the route only accepts PUT).
+- **The admin role dialog had no button**, and `ProtectedRoute` read `window.location` instead of the router's location.
+- **Optional JSON bodies** (validate, transition…) answered 415 when absent.
+- Dead code removed: hook mutations aimed at routes that do not exist (`PATCH /tickets/<id>`, writes to `/user_roles`), unused `DocumentList`/`WorkflowTimeline`, debug `print()`s in the workflow.
+
 ## Incomplete features
 
 - ✅ **Fixed: emails were never triggered.** Fixed in branch `fix/email-notifications`. All three emails are now sent (see [architecture.md](architecture.md#cross-cutting-concerns)), and the template links point to real SPA routes (`/dossier/<id>`, `/dossiers`, `/admin`). Existing databases keep their old template copies in `app_config`, so re-save the templates in **Admin → Settings** to pick up the corrected links. Still open: `email_check_interval_hours` is not used, and the delay check stays hourly.
-- **Documents carry no file content.** `POST /api/documents/` accepts a `file_path` string only. There is no binary upload for dossier documents, only for profile images.
+- **Documents carry no file content.** `POST /api/documents/` accepts a `file_path` string only. There is no binary upload for dossier documents, only for profile images, and the dossier page's upload dialog is never opened, so agents cannot attach files from the UI at all. The QA lifecycle test attaches them through the API for that reason.
 - **`auto_archive_days`** is stored but no archiving job exists.
 - **No migrations.** Flask-Migrate and Alembic are installed, but the schema relies on `db.create_all()`, which never alters existing tables. Adding a column to a model will not update an existing Postgres database.
 
@@ -84,7 +100,5 @@ Covered by `tests/test_api_contract.py`, `tests/test_admin_users.py`, `tests/tes
 - Runtime data is mixed into the source tree: `postgres/`, `minio/`, `backend/logs/`, `backend/data/*.db`, `backend/uploads/`, `.venv/`, `.pytest_cache/`. The repo root is not a git repository (only `frontend/` is). When you initialize one, add a `.gitignore` that excludes these paths and `.env`.
 - ✅ **Fixed: Lovable and Supabase leftovers.** Removed in branch `refactor/frontend-python-backend`, together with `lovable-tagger`, `@supabase/supabase-js`, the Bun lockfile and the unused mock pages. See [architecture.md](architecture.md#api-layer) for the resulting API layer.
 - **The frontend does not pass a full typecheck.** `npm run typecheck` reports about 155 errors, all older than the refactor: they were hidden because `src/types/database.ts` had syntax errors that stopped `tsc` early, and Vite builds without type-checking. Most come from the pages using fields the types don't declare (for example `student.formation`, `milestone.order`, the `{tickets, total}` shape of the paginated ticket list) and from status-label maps that miss some milestone codes. Fix them page by page, starting with `TicketDetail.tsx` (65 errors). `npm run lint` reports 51 older problems.
-- **`GET /api/tickets` returns 10 tickets by default** (`length` query parameter), and the frontend never sends `length` or pages through results. The dashboards and the dossier list therefore show at most 10 dossiers, while `total` counts all of them.
-- **The role-change dialog in `AdminUsers` is unreachable.** `handleUpdateRole` and its dialog exist, but nothing calls `setDialogOpen(true)`, so admins have no button to change a role.
 - **`init_db.py` crashes on Windows when its output is piped** (emoji in `print` under the cp1252 console encoding). Set `PYTHONUTF8=1`; `run_qa.py` does.
 - **Test coverage gaps.** The backend suite covers auth, notifications, scheduling, emails and admin user creation; the frontend suites cover the API layer, routing, login and notifications (see [testing.md](testing.md)). The workflow engine (`update_status` and its validators) and the ticket pages are the most valuable things to test next.
