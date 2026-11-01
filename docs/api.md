@@ -10,6 +10,7 @@ Errors come back as `{"error": "...", "code": ..., "status": ...}` or `{"message
 |---|---|
 | 401 | Missing, malformed or expired JWT (all token problems, including ones Flask-JWT-Extended would answer with 422). The SPA logs the user out |
 | 403 | Authenticated, but the role is not allowed |
+| 400 | Malformed body: schema errors come back with a `fields` object (`{"error": "Invalid request data", "fields": {"email": [...]}}`); workflow rules (refused transitions, missing documents) explain themselves in `error` |
 | 409 | The resource already exists, for example a duplicate username or email (`ConflictError`, code 4091) |
 
 Collection URLs work with or without a trailing slash (`/api/tickets` and `/api/tickets/`); there is no redirect.
@@ -93,7 +94,7 @@ Authorization: Bearer <token>
 | GET | `/<id>` | AGENT, ADMIN, STUDENT | Get one |
 | POST | `/` | AGENT, ADMIN | Attach or replace a file reference: `{ticket_id, document_type, file_path}` |
 | PATCH | `/<id>/validate` | AGENT, ADMIN | Validate (may advance the workflow) |
-| PATCH | `/<id>/invalidate` | AGENT, ADMIN | Invalidate with a comment (may trigger the correction loop) |
+| PATCH | `/<id>/invalidate` | AGENT, ADMIN | Invalidate. `comment` (the reason, sent to the student) is **required**. May trigger the correction loop |
 | DELETE | `/<id>` | ADMIN, AGENT | Delete |
 | GET | `/ticket/<ticket_id>/status` | AGENT, ADMIN, STUDENT | Per-document status for a ticket |
 | GET | `/ticket/<ticket_id>/missing` | AGENT, ADMIN, STUDENT | Missing or unvalidated documents |
@@ -126,6 +127,6 @@ Authorization: Bearer <token>
 | PUT / PATCH | `/app_settings/<id>` | ADMIN | Update settings and email templates |
 | GET | `/user_roles` | — | Roles (compatibility endpoint for the SPA) |
 | GET | `/profiles` | — | User profiles |
-| PUT | `/profiles/<id>` | — | Update a profile |
+| PUT | `/profiles/<id>` | — | Update `email`, `full_name`, `phone_number`. Only the account owner or an ADMIN (403 otherwise) |
 | GET | `/ticket_milestone_history` | — | Chronology rows (timeline data) |
 | GET | `/formations` | — | Formations with type and professors |

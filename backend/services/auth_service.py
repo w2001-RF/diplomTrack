@@ -8,7 +8,7 @@ from extensions import db
 from utils.security import verify_password, hash_password
 from services.audit_service import AuditService
 from services.student_service import StudentService
-from exceptions import ConflictError
+from exceptions import ConflictError, ValidationError
 
 
 class AuthService:
@@ -61,7 +61,7 @@ class AuthService:
 
         student = StudentService.get_student_by_email(email)
         if not student:
-            raise ValueError("No student exists with this email yet. Contact the admin to create your student profile.")
+            raise ValidationError("No student exists with this email yet. Contact the admin to create your student profile.")
         
         db.session.add(user)
         db.session.flush()

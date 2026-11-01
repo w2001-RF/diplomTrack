@@ -46,7 +46,8 @@ jobs:
         run: pip install -r requirements.txt pytest-github-actions-annotate-failures
 
       - name: Run tests
-        run: pytest -ra --junitxml=test-results/pytest.xml
+        # .coveragerc limits coverage to application code
+        run: pytest -ra --junitxml=test-results/pytest.xml --cov --cov-report=term --cov-report=xml:test-results/coverage.xml
 
       - name: Upload results
         if: always()

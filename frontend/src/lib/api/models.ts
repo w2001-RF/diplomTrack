@@ -56,20 +56,19 @@ export type NotificationType = 'info' | 'warning' | 'error' | 'success';
 // Resources
 // ---------------------------------------------------------------------------
 
-/** GET /api/app_settings */
+/**
+ * GET /api/app_settings: one row per setting of the single AppConfig record
+ * (AppSettingSerializer.serialize_field in backend/routes/data_routes.py)
+ */
 export interface AppSettingRow {
   id: string;
   key: string;
-  value: string | null;
+  value: string | number | boolean | null;
+  type: 'string' | 'integer' | 'boolean' | 'text' | 'datetime' | string;
   description: string | null;
-  alerts_email: string | null;
-  warning_delay_days: number | null;
-  notification_template_agent: string | null;
-  notification_template_student: string | null;
-  created_at: string;
-  updated_at: string;
 }
-export type AppSettingUpdate = Partial<AppSettingRow>;
+/** PATCH /api/app_settings/<id> takes {<key>: value} */
+export type AppSettingUpdate = Record<string, unknown>;
 
 /** /api/documents */
 export interface DocumentRow {
@@ -125,6 +124,15 @@ export interface ProfileRow {
 }
 export type ProfileUpdate = Partial<ProfileRow>;
 
+/** Nested formation (FormationMiniSchema in backend/schemas/ticket_schema.py) */
+export interface FormationSummary {
+  id: number;
+  formation_name: string;
+  description?: string | null;
+  formation_type?: { id?: number; code: string; label?: string } | null;
+  professor_responsible?: { id: number; first_name: string; last_name: string; email?: string | null; phone?: string | null } | null;
+}
+
 /** /api/students */
 export interface StudentRow {
   id: number;
@@ -135,6 +143,7 @@ export interface StudentRow {
   email: string;
   phone: string | null;
   formation_id: number | null;
+  formation?: FormationSummary | null;
   academic_year: string;
   created_at: string;
   updated_at: string;
@@ -143,26 +152,29 @@ export type StudentInsert = Pick<StudentRow, 'first_name' | 'last_name' | 'num_a
   Partial<StudentRow>;
 export type StudentUpdate = Partial<StudentRow>;
 
-/** GET /api/ticket_milestone_history */
+/** GET /api/ticket_milestone_history (ChronologieSerializer.serialize_transition) */
 export interface MilestoneHistoryRow {
   id: string;
   ticket_id: string;
-  from_milestone_id: string | null;
-  to_milestone_id: string;
+  from_milestone: MilestoneRow | null;
+  to_milestone: MilestoneRow;
   changed_by: string;
   changed_at: string;
   notes: string | null;
+  status?: string;
+  blocked_reason?: string | null;
 }
-export type MilestoneHistoryInsert = Pick<MilestoneHistoryRow, 'ticket_id' | 'to_milestone_id' | 'changed_by'> &
-  Partial<MilestoneHistoryRow>;
+export type MilestoneHistoryInsert = Pick<MilestoneHistoryRow, 'ticket_id' | 'changed_by'> & Partial<MilestoneHistoryRow>;
 
 /** /api/tickets */
 export interface TicketRow {
   id: string;
   reference: string;
   student_id: string;
-  status: TicketStatus;
+  /** Coarse state from the API (OPEN | PENDING | COMPLETED); use current_milestone.code for the workflow position */
+  status: TicketStatus | 'OPEN' | 'PENDING' | 'COMPLETED';
   current_milestone_id: string | null;
+  current_milestone?: Pick<MilestoneRow, 'id' | 'code' | 'label'> | null;
   created_at: string;
   updated_at: string;
 }

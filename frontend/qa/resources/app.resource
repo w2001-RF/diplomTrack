@@ -2,7 +2,8 @@
 Documentation       Browser keywords for the DiplomTrack SPA (SeleniumLibrary).
 # variables.resource first: the library import reads ${TIMEOUT}
 Resource            variables.resource
-Library             SeleniumLibrary    timeout=${TIMEOUT}    run_on_failure=Capture Page Screenshot
+# implicit_wait: every element lookup waits for the SPA to render it
+Library             SeleniumLibrary    timeout=${TIMEOUT}    implicit_wait=5s    run_on_failure=Capture Page Screenshot
 
 
 *** Variables ***
@@ -56,3 +57,31 @@ Open Page
 Toast Should Show
     [Arguments]    ${text}
     Wait Until Element Is Visible    xpath://li[@data-sonner-toast and contains(., "${text}")]
+
+Change Milestone To
+    [Documentation]    Picks a milestone in the dossier page's "Changer le jalon" select.
+    [Arguments]    ${label}
+    Wait Until Element Is Enabled    css:button[role="combobox"]
+    Click Element    css:button[role="combobox"]
+    Wait Until Element Is Visible    xpath://div[@role="option" and normalize-space()="${label}"]
+    Click Element    xpath://div[@role="option" and normalize-space()="${label}"]
+
+Current Milestone Should Be
+    [Arguments]    ${label}
+    Wait Until Element Contains    css:button[role="combobox"]    ${label}
+
+Validate Every Pending Document
+    [Documentation]    Clicks "Valider" on each document until none is left, confirming each dialog.
+    ${remaining}=    Get Element Count    xpath://button[normalize-space()="Valider"]
+    WHILE    ${remaining} > 0    limit=20
+        Click Button    xpath:(//button[normalize-space()="Valider"])[1]
+        Click Button    xpath://div[@role="dialog"]//button[contains(., "Confirmer la validation")]
+        Wait Until Element Is Not Visible    xpath://div[@role="dialog"]
+        Wait Until Keyword Succeeds    5s    0.25s    Valider Count Should Drop Below    ${remaining}
+        ${remaining}=    Get Element Count    xpath://button[normalize-space()="Valider"]
+    END
+
+Valider Count Should Drop Below
+    [Arguments]    ${count}
+    ${now}=    Get Element Count    xpath://button[normalize-space()="Valider"]
+    Should Be True    ${now} < ${count}

@@ -82,6 +82,11 @@ class StudentService:
         return Student.query.get_or_404(student_id)
 
     @staticmethod
+    def get_student_by_user(user_id: int):
+        """The student record linked to an account, or None"""
+        return Student.query.filter_by(user_id=user_id).first()
+
+    @staticmethod
     def get_student_by_email(email: str) -> Student:
         """
         Find student profile by linked user email
@@ -90,7 +95,6 @@ class StudentService:
 
     @staticmethod
     def create_student(data: dict, performed_by: int = None) -> Student:
-        print("Creating student with data:", data)
         formation = Formation.query.get_or_404(data["formation_id"])
         if not formation:
             raise ValueError("Formation not found")

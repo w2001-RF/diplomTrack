@@ -8,7 +8,7 @@ export { useMilestonesQuery, useMilestoneHistoryQuery, type MilestoneHistoryWith
 export { useProfileQuery, useUpdateProfile, useAllProfilesQuery } from './useProfilesQuery';
 export { useNotificationsQuery } from './useNotificationsQuery';
 export { useSettingsQuery } from './useSettingsQuery';
-export { useUserRolesQuery, useUserRoleQuery } from './useUserRolesQuery';
+export { useUserRolesQuery } from './useUserRolesQuery';
 
 // Cache utilities
 export { useApiCache, CACHE_KEYS, defaultCacheConfig } from './useApiCache';

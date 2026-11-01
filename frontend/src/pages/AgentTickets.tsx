@@ -6,6 +6,7 @@ import { DataTable } from '@/components/common/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { milestoneCodeOf } from '@/lib/tickets';
 import { useTicketsQuery } from '@/hooks/api/useTicketsQuery';
 import { Plus, Loader2, Ticket, Trash2, Upload, Clock } from 'lucide-react';
 import type { TicketStatus } from '@/lib/api/models';
@@ -96,7 +97,7 @@ export default function AgentTickets() {
     return ticketsList.filter(ticket => {
       // Filtre par statut
       if (activeFilters.status && activeFilters.status !== 'ALL') {
-        if (ticket.status !== activeFilters.status) return false;
+        if (milestoneCodeOf(ticket) !== activeFilters.status) return false;
       }
       
       // Filtre par formation
@@ -146,8 +147,8 @@ export default function AgentTickets() {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-foreground">{ticket.reference}</span>
-                  <Badge className={`${getStatusColor(ticket.status)} text-primary-foreground text-xs`}>
-                    {statusLabels[ticket.status]}
+                  <Badge className={`${getStatusColor(milestoneCodeOf(ticket))} text-primary-foreground text-xs`}>
+                    {statusLabels[milestoneCodeOf(ticket)]}
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">

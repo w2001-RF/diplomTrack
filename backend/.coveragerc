@@ -1,0 +1,13 @@
+# Coverage settings for: pytest --cov --cov-report=term-missing
+[run]
+source = .
+omit =
+    tests/*
+    .venv/*
+    .diplomtrack/*
+    */site-packages/*
+    wsgi.py
+
+[report]
+skip_empty = true
+sort = Cover

@@ -3,12 +3,15 @@ from extensions import db
 from utils.security import hash_password
 from utils.passwords import generate_secure_password
 from services.audit_service import AuditService
+import logging
 import os
 import uuid
 from werkzeug.utils import secure_filename
 from flask import current_app
 from io import BytesIO
 from exceptions import ConflictError
+
+logger = logging.getLogger(__name__)
 
 # =========================================================
 # Helper
@@ -280,76 +283,38 @@ class UserService:
     @staticmethod
     def delete_profile_image(user_id: int, performed_by=None):
         """
-        Delete profile image for a user
+        Delete profile image for a user (from MinIO or the local upload folder)
         """
         user = User.query.get_or_404(user_id)
-        
+
         if not user.profile_image:
             raise ValueError("No profile image to delete")
-        
-        use_minio = UserService._use_minio()
-        bucket = current_app.config.get("MINIO_BUCKET", "uploads")
 
-        # Generate filename
-        ext = secure_filename(file.filename).rsplit('.', 1)[1].lower()
-        filename = f"profile_{user.id}_{uuid.uuid4().hex[:8]}.{ext}"
+        try:
+            if UserService._use_minio():
+                bucket = current_app.config.get("MINIO_BUCKET", "uploads")
+                UserService._get_minio_client().remove_object(bucket, user.profile_image)
+            else:
+                path = os.path.join(
+                    current_app.config.get("UPLOAD_FOLDER", "uploads/profiles"),
+                    user.profile_image
+                )
+                if os.path.exists(path):
+                    os.remove(path)
+        except Exception:
+            # A file already gone must not keep the reference alive
+            logger.warning("Profile image file for user %s could not be removed", user.id, exc_info=True)
 
-        # Delete old image if exists
-        if user.profile_image:
-            try:
-                if use_minio:
-                    client = UserService._get_minio_client()
-                    client.remove_object(bucket, user.profile_image)
-                else:
-                    old_path = os.path.join(
-                        current_app.config.get("UPLOAD_FOLDER", "uploads/profiles"),
-                        user.profile_image
-                    )
-                    if os.path.exists(old_path):
-                        os.remove(old_path)
-            except Exception:
-                pass  # do not block upload if old file missing
-
-        # -----------------------------------------
-        # Upload new file
-        # -----------------------------------------
-        if use_minio:
-            client = UserService._get_minio_client()
-
-            if not client.bucket_exists(bucket):
-                client.make_bucket(bucket)
-
-            file_bytes = file.read()
-            file.seek(0)
-
-            client.put_object(
-                bucket,
-                filename,
-                BytesIO(file_bytes),
-                length=len(file_bytes),
-                content_type=file.content_type
-            )
-
-        else:
-            upload_folder = current_app.config.get("UPLOAD_FOLDER", "uploads/profiles")
-            os.makedirs(upload_folder, exist_ok=True)
-
-            filepath = os.path.join(upload_folder, filename)
-            file.save(filepath)
-
-        # Update DB
-        user.profile_image = filename
+        user.profile_image = None
         db.session.commit()
 
         AuditService.log_action(
-            action=f"UPLOAD_PROFILE_IMAGE_{user.role}",
+            action=f"DELETE_PROFILE_IMAGE_{user.role}",
             entity_type="USER",
             entity_id=user.id,
             performed_by=performed_by
         )
 
-        return filename
-    
     @staticmethod
     def get_profile_image_path(user_id: int) -> str:
         """

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { fetchAllPages } from '@/lib/api/pagination';
 import type { StudentRow, StudentInsert, StudentUpdate } from '@/lib/api/models';
 import { toast } from 'sonner';
 import { CACHE_KEYS, defaultCacheConfig } from './useApiCache';
@@ -19,12 +20,15 @@ export function useStudentsQuery(options: UseStudentsQueryOptions = {}) {
   const studentsQuery = useQuery({
     queryKey: [CACHE_KEYS.STUDENTS],
     queryFn: async (): Promise<StudentRow[]> => {
-      const { data, error } = await api.data.getMany<StudentRow>('students', {
-        sort: [{ field: 'num_apogee', direction: 'asc' }]
-      });
-
-      if (error) throw new Error(error.message);
-      return data || [];
+      // The API pages students (`limit`, default 10); the list filters client side
+      const { items } = await fetchAllPages<StudentRow>(async (page, size) => {
+        const { data, error, count } = await api.data.getMany<StudentRow>('students', {
+          sort: [{ field: 'num_apogee', direction: 'asc' }],
+          pagination: { page, limit: size },
+        });
+        return { data: { items: data ?? [], total: count ?? data?.length ?? 0 }, error };
+      }, 100);
+      return items;
     },
     enabled,
     staleTime: defaultCacheConfig.staleTime,
@@ -207,7 +211,7 @@ export function useStudentByUserQuery(userId: string | undefined) {
       });
       
       if (error) throw new Error(error.message);
-      return data || null;
+      return data?.[0] ?? null;
     },
     enabled: !!userId,
     staleTime: defaultCacheConfig.staleTime,
