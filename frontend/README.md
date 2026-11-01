@@ -17,6 +17,11 @@ npm run dev        # http://localhost:8080, /api is proxied to http://localhost:
 | `npm run build` | Production build in `dist/` (served by Nginx in Docker) |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc` without emitting |
+| `npm test` | Unit and integration tests (Vitest, MSW) |
+| `npm run test:coverage` | Same, with a coverage report in `coverage/` |
+| `npm run qa` | End-to-end QA suite in `qa/` (Robot Framework, starts its own backend) |
+
+See [docs/testing.md](../docs/testing.md) for the test layout.
 
 ## Configuration
 

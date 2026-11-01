@@ -63,7 +63,7 @@ class UserService:
             action="CREATE_USER_{role}".format(role=role),
             entity_type="USER",
             entity_id=user.id,
-            user_id = performed_by
+            performed_by=performed_by
         )
 
         return serialize_user(user)

@@ -81,4 +81,5 @@ For local development without Docker, see [docs/setup.md](docs/setup.md).
 | [docs/data-model.md](docs/data-model.md) | Database entities and relationships |
 | [docs/api.md](docs/api.md) | REST endpoint reference with role requirements |
 | [docs/setup.md](docs/setup.md) | Local development, configuration and environment variables |
+| [docs/testing.md](docs/testing.md) | Backend, frontend and end-to-end (Robot Framework) tests |
 | [docs/known-issues.md](docs/known-issues.md) | Bugs and technical debt found while reviewing the code |

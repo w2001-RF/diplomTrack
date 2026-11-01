@@ -32,3 +32,6 @@ dist/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Test reports (CI artifacts)
+test-results/

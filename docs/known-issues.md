@@ -38,6 +38,12 @@ Fixed in branch `refactor/frontend-python-backend`:
 - **Uploads through Nginx.** Nginx's default 1 MB body limit was below Flask's 10 MB `MAX_CONTENT_LENGTH`; it is now 10 MB.
 - **`npm ci` failed** because `package-lock.json` was out of sync with `package.json`. The lockfile is regenerated.
 
+### 9. ✅ Fixed: creating a user through the admin API answered 500
+Fixed in branch `test/frontend-suites`, found by the QA suite. `UserService.create_user` passed `user_id=` to `AuditService.log_action`, which takes `performed_by=`. The user was already committed, so the account existed but the API (and the admin UI) reported an error, and no audit row was written. Covered by `tests/test_admin_users.py`.
+
+### 10. ✅ Fixed: the signup validation test always failed
+Fixed in branch `test/frontend-suites`. `test_signup_missing_fields_returns_400` failed on `main` because the test app in `tests/conftest.py` had none of the JSON error handlers that `create_app()` registers, so the route's `ValidationError` escaped instead of becoming a 400. The handlers now live in `error_handlers.py` and both use them. The route itself was correct.
+
 ## Incomplete features
 
 - ✅ **Fixed: emails were never triggered.** Fixed in branch `fix/email-notifications`. All three emails are now sent (see [architecture.md](architecture.md#cross-cutting-concerns)), and the template links point to real SPA routes (`/dossier/<id>`, `/dossiers`, `/admin`). Existing databases keep their old template copies in `app_config`, so re-save the templates in **Admin → Settings** to pick up the corrected links. Still open: `email_check_interval_hours` is not used, and the delay check stays hourly.
@@ -67,4 +73,6 @@ Fixed in branch `refactor/frontend-python-backend`:
 - Runtime data is mixed into the source tree: `postgres/`, `minio/`, `backend/logs/`, `backend/data/*.db`, `backend/uploads/`, `.venv/`, `.pytest_cache/`. The repo root is not a git repository (only `frontend/` is). When you initialize one, add a `.gitignore` that excludes these paths and `.env`.
 - ✅ **Fixed: Lovable and Supabase leftovers.** Removed in branch `refactor/frontend-python-backend`, together with `lovable-tagger`, `@supabase/supabase-js`, the Bun lockfile and the unused mock pages. See [architecture.md](architecture.md#api-layer) for the resulting API layer.
 - **The frontend does not pass a full typecheck.** `npm run typecheck` reports about 155 errors, all older than the refactor: they were hidden because `src/types/database.ts` had syntax errors that stopped `tsc` early, and Vite builds without type-checking. Most come from the pages using fields the types don't declare (for example `student.formation`, `milestone.order`, the `{tickets, total}` shape of the paginated ticket list) and from status-label maps that miss some milestone codes. Fix them page by page, starting with `TicketDetail.tsx` (65 errors). `npm run lint` reports 51 older problems.
-- Test coverage is limited to auth routes. The workflow engine (`update_status` and its validators) is the most valuable thing to test next.
+- **The role-change dialog in `AdminUsers` is unreachable.** `handleUpdateRole` and its dialog exist, but nothing calls `setDialogOpen(true)`, so admins have no button to change a role.
+- **`init_db.py` crashes on Windows when its output is piped** (emoji in `print` under the cp1252 console encoding). Set `PYTHONUTF8=1`; `run_qa.py` does.
+- **Test coverage gaps.** The backend suite covers auth, notifications, scheduling, emails and admin user creation; the frontend suites cover the API layer, routing, login and notifications (see [testing.md](testing.md)). The workflow engine (`update_status` and its validators) and the ticket pages are the most valuable things to test next.
