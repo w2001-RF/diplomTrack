@@ -469,13 +469,13 @@ export default function TicketDetail() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-foreground">{ticket.reference}</h1>
+          <div className="min-w-[16rem] flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="whitespace-nowrap text-2xl font-semibold tracking-tight text-foreground">{ticket.reference}</h1>
               <Badge className={`${getStatusColor(currentMilestone.code)} text-primary-foreground`}>
                 {getStatusIcon(currentMilestone.code)}
                 <span className="ml-1">{currentMilestone.label || statusLabels[currentMilestone.code]}</span>
@@ -491,7 +491,7 @@ export default function TicketDetail() {
           </div>
           
           {canValidate && (
-            <div className="flex gap-2 items-end">
+            <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-border/70 bg-card p-3 shadow-sm">
               {/* Date de changement */}
               <div className="flex flex-col gap-1">
                 <Label htmlFor="milestone-date" className="text-xs">

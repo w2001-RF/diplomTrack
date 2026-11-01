@@ -159,7 +159,7 @@ export default function AgentTickets() {
                   Créé le {new Date(ticket.created_at).toLocaleDateString('fr-FR')}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Mis à jour: {new Date(ticket.updated_at).toLocaleDateString('fr-FR')}
+                  Mis à jour: {new Date(ticket.updated_at || ticket.created_at).toLocaleDateString('fr-FR')}
                 </p>
               </div>
             )

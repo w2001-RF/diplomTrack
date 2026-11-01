@@ -1,47 +1,53 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { AppSidebar } from './AppSidebar';
-import { Search } from 'lucide-react';
 import { NotificationsMenu } from './NotificationsMenu';
-import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 interface DashboardLayoutProps {
   children: ReactNode;
   title?: string;
 }
 
+const COLLAPSED_KEY = 'sidebar_collapsed';
+
+function readCollapsed() {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function DashboardLayout({ children, title }: DashboardLayoutProps) {
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+
+  const toggleCollapsed = () => {
+    setCollapsed((value) => {
+      try {
+        localStorage.setItem(COLLAPSED_KEY, value ? '0' : '1');
+      } catch {
+        // Private mode: the choice just isn't remembered
+      }
+      return !value;
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <AppSidebar />
-      
-      <main className="ml-64 min-h-screen transition-all duration-300">
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 bg-background/80 backdrop-blur-sm border-b border-border">
-          <div className="flex items-center gap-4">
-            {title && (
-              <h1 className="text-xl font-semibold text-foreground">{title}</h1>
-            )}
+      <AppSidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
+
+      <main className={cn('min-h-screen transition-[margin] duration-300 ease-out', collapsed ? 'ml-[4.5rem]' : 'ml-64')}>
+        {/* Frosted top bar */}
+        <header className="glass sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/60 px-8">
+          <div className="min-w-0">
+            {title && <h1 className="truncate text-lg font-semibold tracking-tight text-foreground">{title}</h1>}
           </div>
-          
-          <div className="flex items-center gap-4">
-            {/* Search */
-            title && (<div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-              <Input 
-                placeholder="Rechercher..." 
-                className="pl-10 w-64 bg-secondary/50 border-transparent focus:border-primary/30"
-              />
-            </div>)}
-            
-            {/* Notifications */}
+          <div className="flex items-center gap-2">
             <NotificationsMenu />
           </div>
         </header>
 
-        {/* Content */}
-        <div className="p-6">
-          {children}
-        </div>
+        <div className="mx-auto w-full max-w-[1400px] px-8 py-8">{children}</div>
       </main>
     </div>
   );

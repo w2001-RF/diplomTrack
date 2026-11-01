@@ -66,7 +66,8 @@ const statusLabels: Partial<Record<TicketStatus, string>> = {
   ARCHIVE: 'Archivé'
 };
 
-const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
+// UIT blue, a lighter blue, crimson, sand gold, then quieter tones
+const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))', 'hsl(var(--status-validated))', 'hsl(var(--status-blocked))', 'hsl(var(--status-pending))'];
 
 export default function AdminDashboard() {
   const navigate = useNavigate();

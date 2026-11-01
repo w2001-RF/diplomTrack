@@ -15,26 +15,27 @@ interface StatsCardProps {
   delay?: number;
 }
 
+// White card, colour only in the icon chip: one accent at a time
+const chip: Record<NonNullable<StatsCardProps['variant']>, string> = {
+  default: 'bg-secondary text-foreground',
+  primary: 'bg-brand-blue/10 text-brand-blue dark:bg-primary/15 dark:text-primary',
+  accent: 'bg-brand-crimson/10 text-brand-crimson',
+  success: 'bg-status-validated/10 text-status-validated',
+  warning: 'bg-status-pending/10 text-status-pending',
+  danger: 'bg-status-rejected/10 text-status-rejected',
+};
+
 export function StatsCard({ title, value, subtitle, icon: Icon, trend, variant = 'default', delay = 0 }: StatsCardProps) {
   return (
-    <Card 
-      className={cn(
-        "p-6 animate-fade-in transition-all duration-200 hover:shadow-md",
-        variant === 'primary' && "border-primary/20 bg-primary/5",
-        variant === 'accent' && "border-accent/20 bg-accent/5",
-        variant === 'success' && "border-status-validated/20 bg-status-validated/5",
-        variant === 'warning' && "border-status-pending/20 bg-status-pending/5",
-        variant === 'danger' && "border-status-rejected/20 bg-status-rejected/5"
-      )}
+    <Card
+      className="animate-fade-in p-5 transition-shadow duration-300 hover:shadow-md"
       style={{ animationDelay: `${delay}s` }}
     >
-      <div className="flex items-start justify-between">
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-3xl font-bold text-foreground">{value}</p>
-          {subtitle && (
-            <p className="text-xs text-muted-foreground">{subtitle}</p>
-          )}
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <p className="text-[13px] font-medium text-muted-foreground">{title}</p>
+          <p className="text-[2rem] font-semibold leading-tight tracking-tight text-foreground tabular-nums">{value}</p>
+          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
           {trend && (
             <div className={cn(
               "flex items-center gap-1 text-xs font-medium",
@@ -45,17 +46,9 @@ export function StatsCard({ title, value, subtitle, icon: Icon, trend, variant =
             </div>
           )}
         </div>
-        
-        <div className={cn(
-          "flex items-center justify-center w-12 h-12 rounded-xl",
-          variant === 'default' && "bg-secondary text-secondary-foreground",
-          variant === 'primary' && "bg-primary/10 text-primary",
-          variant === 'accent' && "bg-accent/10 text-accent",
-          variant === 'success' && "bg-status-validated/10 text-status-validated",
-          variant === 'warning' && "bg-status-pending/10 text-status-pending",
-          variant === 'danger' && "bg-status-rejected/10 text-status-rejected"
-        )}>
-          <Icon size={24} />
+
+        <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", chip[variant])}>
+          <Icon size={19} />
         </div>
       </div>
     </Card>
