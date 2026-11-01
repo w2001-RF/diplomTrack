@@ -82,7 +82,16 @@ class WorkflowValidator:
 
 
 class WorkflowNotifier:
-    """Handles all workflow notifications"""
+    """Handles all workflow notifications.
+
+    These messages are written to the student ("Votre dossier..."), so they go
+    to the student's account. ticket.user_id is the agent in charge.
+    """
+
+    @staticmethod
+    def _student_user_id(ticket: Ticket):
+        """The student's account, or None when the student has not signed up yet"""
+        return ticket.student.user_id if ticket.student else None
     
     NOTIFICATION_CONFIGS = {
         "ATTENTE_DIPLOME": {
@@ -123,14 +132,15 @@ class WorkflowNotifier:
         from services.notification_service import NotificationService
         
         config = WorkflowNotifier.NOTIFICATION_CONFIGS.get(milestone_code)
-        if not config:
+        recipient = WorkflowNotifier._student_user_id(ticket)
+        if not config or recipient is None:
             return
         
         # Format message with additional context if provided
         message = config["message"].format(**kwargs) if kwargs else config["message"]
         
         NotificationService.create_notification(
-            user_id=ticket.user_id,
+            user_id=recipient,
             ticket_id=ticket.id,
             type=config["type"],
             title=config["title"],
@@ -141,9 +151,12 @@ class WorkflowNotifier:
     def send_correction_notification(ticket: Ticket, invalidated_docs: list) -> None:
         """Send notification for document correction"""
         from services.notification_service import NotificationService
-        
+
+        recipient = WorkflowNotifier._student_user_id(ticket)
+        if recipient is None:
+            return
         NotificationService.create_notification(
-            user_id=ticket.user_id,
+            user_id=recipient,
             ticket_id=ticket.id,
             type="warning",
             title="Correction de documents requise",
@@ -155,9 +168,12 @@ class WorkflowNotifier:
     def send_diploma_type_change_notification(ticket: Ticket) -> None:
         """Send notification when diploma type is auto-changed"""
         from services.notification_service import NotificationService
-        
+
+        recipient = WorkflowNotifier._student_user_id(ticket)
+        if recipient is None:
+            return
         NotificationService.create_notification(
-            user_id=ticket.user_id,
+            user_id=recipient,
             ticket_id=ticket.id,
             type="success",
             title="Diplôme validé par le centre",
@@ -222,7 +238,7 @@ class ChronologyManager:
             last_chrono.ended_at = date_time
             last_chrono.completed_at = date_time
             last_chrono.status = "DONE"
-            print(last_chrono.milestone.code, last_chrono.status)
+            logger.debug("Closing chronology %s (%s)", last_chrono.milestone.code, last_chrono.status)
             
             db.session.flush()
             logger.info(
@@ -249,7 +265,6 @@ class ChronologyManager:
             ticket_id=ticket.id,
             milestone_id=milestone_id
         ).first()
-        print(existing)
         if existing:
             # Override existing chronology
             logger.info(
@@ -449,8 +464,7 @@ def update_status(
         )
     
     db.session.commit()
-    print(db.session.query)
-    print(is_new, chronologie.milestone.code, chronologie.status)
+    logger.debug("Chronology %s new=%s status=%s", chronologie.milestone.code, is_new, chronologie.status)
 
     # Emails are sent after the commit so an SMTP problem never rolls back
     # the transition (send_email logs and returns False on failure)

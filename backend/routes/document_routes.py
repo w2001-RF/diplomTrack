@@ -4,6 +4,7 @@ from services.auth_service import AuthService
 from utils.permissions import require_roles
 from schemas.document_schema import DocumentSchema
 from services.document_service import DocumentService
+from werkzeug.exceptions import HTTPException
 
 document_bp = Blueprint("documents", __name__, url_prefix="/api/documents")
 
@@ -39,6 +40,8 @@ def list_documents():
             "limit": limit
         }), 200
 
+    except HTTPException:
+        raise
     except Exception as e:
         return {"message": f"Error listing documents: {str(e)}"}, 500
 
@@ -68,6 +71,8 @@ def get_document(document_id):
         
         return document_schema.dump(document), 200
         
+    except HTTPException:
+        raise
     except Exception as e:
         return {"message": f"Error retrieving document: {str(e)}"}, 500
 
@@ -121,6 +126,8 @@ def upload_document():
 
     except ValueError as e:
         return {"message": str(e)}, 400
+    except HTTPException:
+        raise
     except Exception as e:
         return {"message": f"Error uploading document: {str(e)}"}, 500
     
@@ -138,7 +145,7 @@ def validate_document(document_id):
     }
     """
     try:
-        data = request.json or {}
+        data = request.get_json(silent=True) or {}
         comment = data.get("comment", None)
         
         user_id = AuthService.get_current_user().id
@@ -156,6 +163,8 @@ def validate_document(document_id):
         
     except ValueError as e:
         return {"message": str(e)}, 400
+    except HTTPException:
+        raise
     except Exception as e:
         return {"message": f"Error validating document: {str(e)}"}, 500
 
@@ -173,8 +182,11 @@ def invalidate_document(document_id):
     }
     """
     try:
-        data = request.json or {}
-        comment = data.get("comment", "Document rejected")
+        data = request.get_json(silent=True) or {}
+        comment = (data.get("comment") or "").strip()
+        if not comment:
+            # The reason is sent to the student in the correction email
+            return {"message": "comment (the reason for rejection) is required"}, 400
         
         user_id = AuthService.get_current_user().id
         
@@ -189,6 +201,8 @@ def invalidate_document(document_id):
             "document": document_schema.dump(document)
         }, 200
         
+    except HTTPException:
+        raise
     except Exception as e:
         return {"message": f"Error invalidating document: {str(e)}"}, 500
 
@@ -213,6 +227,8 @@ def delete_document(document_id):
             "document_id": document_id
         }, 200
         
+    except HTTPException:
+        raise
     except Exception as e:
         from extensions import db
         db.session.rollback()
@@ -262,6 +278,8 @@ def get_ticket_documents_status(ticket_id):
         
         return status, 200
         
+    except HTTPException:
+        raise
     except Exception as e:
         return {"message": f"Error getting documents status: {str(e)}"}, 500
 
@@ -302,6 +320,8 @@ def get_missing_documents(ticket_id):
             "count": len(missing)
         }, 200
         
+    except HTTPException:
+        raise
     except Exception as e:
         return {"message": f"Error getting missing documents: {str(e)}"}, 500
 
@@ -334,5 +354,7 @@ def get_document_types():
         
         return {"document_types": types}, 200
         
+    except HTTPException:
+        raise
     except Exception as e:
         return {"message": f"Error getting document types: {str(e)}"}, 500

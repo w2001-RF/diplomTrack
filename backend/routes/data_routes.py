@@ -402,7 +402,7 @@ def list_app_settings():
 def update_app_setting(setting_id):
     """Update or patch app setting"""
     try:
-        data = request.json or {}
+        data = request.get_json(silent=True) or {}
         config = AppConfig.query.get_or_404(setting_id)
         
         result = []
@@ -520,17 +520,23 @@ def list_profiles():
 def update_profile(profile_id):
     """Update user profile"""
     try:
-        data = request.json or {}
+        data = request.get_json(silent=True) or {}
+        claims = get_jwt()
+        # Only the account owner or an admin may edit a profile
+        if claims.get("role") != "ADMIN" and claims.get("user_id") != profile_id:
+            return jsonify({"message": "Access denied"}), 403
+
         user = User.query.get_or_404(profile_id)
-        
+
         # Update allowed fields
         if 'email' in data:
             user.email = data['email']
         if 'full_name' in data:
             user.username = data['full_name']
-        if 'phone' in data and hasattr(user, 'phone'):
-            user.phone = data['phone']
-        
+        phone = data.get('phone_number', data.get('phone'))
+        if phone is not None:
+            user.phone_number = phone
+
         db.session.commit()
         
         return jsonify(UserProfileSerializer.serialize(user)), 200

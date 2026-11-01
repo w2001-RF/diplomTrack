@@ -5,12 +5,23 @@ import os
 import traceback
 
 from flask import jsonify
+from marshmallow import ValidationError as SchemaValidationError
 from werkzeug.exceptions import HTTPException
 
 from exceptions import APIException, ValidationError
 
 
 def register_error_handlers(app):
+    @app.errorhandler(SchemaValidationError)
+    def handle_schema_validation_error(e):
+        # schema.load() on a malformed body: 400 with the per-field messages
+        return jsonify({
+            "error": "Invalid request data",
+            "code": 4001,
+            "status": 400,
+            "fields": e.messages,
+        }), 400
+
     # ---------------------------------------------------------
     # Global error handler for custom API exceptions
     # ---------------------------------------------------------

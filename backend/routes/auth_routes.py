@@ -123,7 +123,7 @@ def get_session():
 @auth_bp.route("/reset-password", methods=["PUT"])
 @jwt_required()
 def reset_password():
-    data = request.json or {}
+    data = request.get_json(silent=True) or {}
 
     if "password" not in data:
         return {"message": "Password required"}, 400

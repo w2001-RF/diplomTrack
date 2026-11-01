@@ -97,16 +97,13 @@ def get_student(student_id):
     current_user = AuthService.get_current_user();
     
     if current_user.role == "STUDENT":
-        try:
-            user_student = StudentService.get_student(current_user.id)
-            
-            if user_student.id != student_id:
-                return {
-                    "message": "Access denied. You can only view your own information"
-                }, 403
-                
-        except ValueError as e:
-            return {"message": str(e)}, 404
+        # Compare with the record linked to this account (it used to look up the
+        # student whose *id* equals the user id, exposing another student's record)
+        user_student = StudentService.get_student_by_user(current_user.id)
+        if not user_student or user_student.id != student_id:
+            return {
+                "message": "Access denied. You can only view your own information"
+            }, 403
         
     try:
         student = StudentService.get_student(student_id)

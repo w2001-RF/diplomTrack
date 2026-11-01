@@ -6,6 +6,7 @@ from schemas.ticket_schema import TicketSchema, TicketCreateSchema
 from services.ticket_service import TicketService
 from utils.permissions import require_roles
 import logging
+from exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +158,7 @@ def import_tickets():
     }
     """
     try:
-        data = request.json or {}
+        data = request.get_json(silent=True) or {}
         tickets_data = data.get("tickets", [])
         
         if not tickets_data or not isinstance(tickets_data, list):
@@ -250,7 +251,7 @@ def transition_ticket(ticket_id):
     """
     from datetime import datetime
     
-    data = request.json or {}
+    data = request.get_json(silent=True) or {}
     next_state = data.get("next_state")
     changed_at_str = data.get("changed_at", None)
     comment = data.get("comment", "")
@@ -266,13 +267,17 @@ def transition_ticket(ticket_id):
         except ValueError:
             return {"message": "Invalid date format. Use ISO format (YYYY-MM-DDTHH:MM:SS)"}, 400
 
-    ticket = TicketService.transition_ticket(
-        ticket_id, 
-        next_state, 
-        performed_by=get_jwt()["user_id"],
-        changed_at=changed_at,
-        comment=comment
-    )
+    try:
+        ticket = TicketService.transition_ticket(
+            ticket_id,
+            next_state,
+            performed_by=get_jwt()["user_id"],
+            changed_at=changed_at,
+            comment=comment
+        )
+    except ValueError as e:
+        # Workflow rules (graph, documents, diploma type) are client errors
+        raise ValidationError(str(e))
 
     return {
         "message": "Ticket updated successfully",
@@ -331,7 +336,7 @@ def submit_corrected_documents(ticket_id):
     current_user_id = get_jwt_identity()
     
     #Parser les données optionnelles
-    data = request.json or {}
+    data = request.get_json(silent=True) or {}
     changed_at_str = data.get("changed_at")
     comment = data.get("comment")
     
